@@ -1,0 +1,13 @@
+/backend/.env
+/backend/.env.*
+!/backend/.env.example
+/backend/vendor/
+/backend/.phpunit.cache/
+/backend/.phpunit.result.cache
+/firmware/LottoDisplay/Secrets.h
+/firmware/build/
+/.tools/
+/build/
+/.env
+/config/users.json
+/.DS_Store

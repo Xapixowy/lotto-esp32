@@ -1,0 +1,5 @@
+{$SITE_ADDRESS::80} {
+    root * /srv/backend/public
+    php_fastcgi backend:9000
+    file_server
+}
