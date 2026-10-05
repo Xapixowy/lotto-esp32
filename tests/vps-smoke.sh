@@ -50,6 +50,6 @@ test "$(curl "${curl_args[@]}" --output /dev/null --write-out '%{http_code}' "$u
 token=$(docker compose -f compose.test.yaml run --rm --no-deps tests php -r 'echo array_values(json_decode(file_get_contents("/srv/tests/fixtures/users.json"), true))[0];')
 printf 'Authorization: Bearer %s\n' "$token" > "$scratch/header"
 test "$(curl "${curl_args[@]}" --header @"$scratch/header" --output "$scratch/result.json" --write-out '%{http_code}' "$url/api/results")" = 503
-rg -q '"status":"fetching"' "$scratch/result.json"
+grep -q '"status":"fetching"' "$scratch/result.json"
 test "$(curl "${curl_args[@]}" --output /dev/null --write-out '%{http_code}' "$url/unknown")" = 404
 echo 'Host Nginx → PHP-FPM: health 200, denied 401, authenticated fetching 503, unknown 404'
