@@ -53,6 +53,10 @@ docker compose down
 
 ## Deploy on a VPS
 
+If your Ubuntu VPS already uses Nginx for other sites, follow [the Nginx deployment guide](deploy/ubuntu-nginx.md). It covers a dedicated `lotto-deploy` user, private settings, loopback-only Docker access, a separate Nginx virtual host and Certbot. Use `compose.nginx.yaml` for that path.
+
+For a VPS where Caddy should own public ports 80/443, use the following path:
+
 Point a domain's DNS at your VPS and allow ports 80 and 443. Set `LOTTO_DOMAIN` and `APP_URL=https://your-domain` in `.env`. Use Docker Compose 2.24.4 or later; the production override uses `!override`.
 
 ```sh
