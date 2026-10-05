@@ -29,7 +29,8 @@ jobs:
       - name: Validate deployment scripts and production HTTP access
         run: |
           bash -n deploy/activate-release.sh
-          shellcheck deploy/activate-release.sh tests/vps-smoke.sh
+          shellcheck deploy/activate-release.sh tests/vps-smoke.sh tests/deployment-test.sh
+          docker run --rm -v "$PWD:/src:ro" -w /src debian:bookworm-slim bash tests/deployment-test.sh
           bash tests/vps-smoke.sh
       - name: Stop test containers
         if: always()

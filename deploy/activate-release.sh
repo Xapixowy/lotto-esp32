@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
 project=/home/lotto-deploy/lotto-esp32
 release=${1:?Usage: activate-release.sh RELEASE_DIRECTORY}
