@@ -1,0 +1,62 @@
+name: lotto-display
+
+x-backend: &backend
+  image: lotto-display-backend
+  build:
+    context: .
+    dockerfile: docker/Dockerfile
+    target: production
+  env_file: ${BACKEND_ENV_FILE:-.env}
+  environment:
+    APP_ENV: production
+    APP_DEBUG: 'false'
+    REDIS_HOST: redis
+    REDIS_PORT: '6379'
+    REDIS_CLIENT: predis
+    CACHE_STORE: redis
+    SESSION_DRIVER: array
+    QUEUE_CONNECTION: sync
+    LOG_CHANNEL: stderr
+  restart: unless-stopped
+  depends_on:
+    redis:
+      condition: service_healthy
+
+services:
+  redis:
+    image: redis:7.4-alpine
+    command: ['redis-server', '--save', '', '--appendonly', 'no']
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    <<: *backend
+
+  refresh:
+    <<: *backend
+    command: ['php', 'artisan', 'lotto:work']
+
+  web:
+    image: lotto-display-web
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: web
+    environment:
+      SITE_ADDRESS: ':80'
+    ports:
+      - '127.0.0.1:8080:80'
+    depends_on:
+      - backend
+    restart: unless-stopped
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

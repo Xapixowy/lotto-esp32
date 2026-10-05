@@ -1,1 +1,130 @@
-# lotto-esp32
+# Lotto Display
+
+Polish lottery results on an ESP32 Cheap Yellow Display, backed by a Dockerized Laravel API and ephemeral Redis. No database. The backend replaces one shared snapshot every four minutes; devices read it every 15 seconds. Dark-mode results use large numbers and paginated groups.
+
+## Run the backend with Docker
+
+You need Docker with Compose. PHP, Composer, Redis, and a web server run inside containers.
+
+```sh
+cp .env.example .env
+docker compose build
+docker compose run --rm --no-deps --entrypoint php backend artisan key:generate --show
+```
+
+Copy the generated `base64:…` value into `APP_KEY` in `.env`. Set `LOTTO_API_KEY` to your official Lotto key. Generate an independent access token for each user:
+
+```sh
+docker compose run --rm --no-deps --entrypoint php backend -r 'echo bin2hex(random_bytes(32)), PHP_EOL;'
+```
+
+Put the tokens in `.env`, for example:
+
+```dotenv
+API_USERS_JSON='{"owner":"your-generated-token","guest":"another-generated-token"}'
+```
+
+These are named API permissions, with no login or registration. Each token grants the same read access. Use at least 32 characters per token; placeholder tokens are rejected. Keep `.env` private.
+
+```sh
+docker compose up -d
+docker compose logs --tail=30 refresh
+```
+
+The local endpoint is `http://localhost:8080/api/results`. Supply `Authorization: Bearer <your-token>` in your API client. The ESP32 requires HTTPS; the local HTTP endpoint is for backend checks.
+
+`backend` runs PHP-FPM, `web` proxies requests through Caddy, `refresh` fetches independently, and `redis` holds results. Redis has no published port or persistent volume. Restarting Redis clears results; the worker refetches within five seconds when the cache is empty. Multiple worker instances share a Redis lock and due-time marker, so they do not multiply upstream calls.
+
+After editing `.env`, recreate both Laravel services so their startup-cached configuration agrees:
+
+```sh
+docker compose up -d --force-recreate backend refresh
+```
+
+To stop the stack:
+
+```sh
+docker compose down
+```
+
+## Deploy on a VPS
+
+Point a domain's DNS at your VPS and allow ports 80 and 443. Set `LOTTO_DOMAIN` and `APP_URL=https://your-domain` in `.env`. Use Docker Compose 2.24.4 or later; the production override uses `!override`.
+
+```sh
+docker compose -f compose.yaml -f compose.production.yaml up -d --build
+```
+
+Caddy obtains and renews a public HTTPS certificate. Its certificate state uses Docker volumes; result data does not. The public device URL is `https://your-domain/api/results`. PHP-FPM and Redis remain internal. Recreate services after changing tokens using the same two Compose files.
+
+## Arduino IDE: build and flash yourself
+
+1. Install **esp32 by Espressif Systems** in Boards Manager. Its board URL is `https://espressif.github.io/arduino-esp32/package_esp32_index.json`.
+2. In Library Manager install **ArduinoJson** (7.x), **Adafruit ILI9341**, **Adafruit ST7735 and ST7789 Library**, **U8g2_for_Adafruit_GFX**, and **XPT2046_Touchscreen**. Accept Adafruit's dependencies.
+3. Open `firmware/LottoDisplay/LottoDisplay.ino`.
+4. Select **ESP32 Dev Module**, your USB port, and **Partition Scheme → Huge APP (3MB No OTA/1MB SPIFFS)**. Start with upload speed 115200 if necessary.
+5. Leave display-check mode enabled for the first upload. With no `Secrets.h`, the sketch uses `Secrets.example.h` and does not connect to Wi-Fi or any API. Click **Verify**, then **Upload**. If connecting stalls, hold BOOT while the upload begins and release it once writing starts.
+6. Open Serial Monitor at 115200. Confirm landscape output, readable Polish text, arrows, and the lock. Touch diagnostics print raw and mapped coordinates. Sample numbers are demonstration data, not live results.
+
+### Board and touch verification
+
+The supplied hardware profile targets the standard **ESP32-2432S028R**: ILI9341 LCD with XPT2046 resistive touch, separate SPI buses, and backlight GPIO 21. Your board's exact driver is still unverified; `ESP32-32E` and `HSD028309 G5` do not establish the panel controller.
+
+If the display is blank or garbled, check the PCB model and seller documentation before changing `Hardware.h`. It includes an ST7789 switch, rotation/inversion settings, and pin mappings for known variants. Do not assume all yellow boards share the same profile. Use the [CYD reference repository](https://github.com/witnessmenow/ESP32-Cheap-Yellow-Display) to identify the board.
+
+In display-check mode, tap the edges and controls, inspect raw coordinates, and adjust touch bounds, swapping, or flips in `Hardware.h` as needed. Confirm the arrows and lock correspond to their physical touch regions before enabling live mode. Display-check data will eventually show the freshness screen after eight minutes; reset the board to repeat checks.
+
+### Enable live results
+
+Copy `Secrets.example.h` to `Secrets.h` in the sketch folder. This file is ignored by Git. Set:
+
+- `DISPLAY_CHECK_ONLY` to `false`.
+- Your Wi-Fi SSID/password (ESP32 uses 2.4 GHz Wi-Fi).
+- `BACKEND_URL` to the full HTTPS results endpoint.
+- `API_TOKEN` to one configured backend token.
+- `BACKEND_ROOT_CA` to the root certificate that validates your VPS's HTTPS chain, in PEM format. Get it from the certificate authority. This is the root CA, not the server's leaf certificate.
+
+Language is Polish. Rebuild and upload after changing credentials. Firmware uses certificate validation and obtains time through NTP for TLS verification; it does not disable HTTPS verification or follow redirects with your token. Until Wi-Fi/time/TLS is ready, it shows a connection status and retries.
+
+## Display behavior
+
+- Order and content come from the backend: Lotto, Mini Lotto, Multi Multi, Ekstra Pensja, Keno, Szybkie 600, Eurojackpot, Kaskada by default.
+- Each slide has labeled groups. One page holds up to 12 numbers; long groups get additional pages. Each page stays for 10 seconds before the next page/game.
+- Arrows wrap between games. The bottom-right lock holds a game for five minutes while its pages continue rotating. Arrows do not extend the lock. Tap the lock again to unlock immediately.
+- `Lotto` and `Sync` appear at bottom-left in Warsaw time. They mean the last successful upstream fetch and last successful device retrieval, respectively, rather than draw times.
+- Normal polls retain results and show `Odświeżanie...` at upper-left. Errors replace the entire screen and hide controls. Recovery preserves the selected game and any unexpired lock.
+- Wi-Fi failure, unreachable API, denied access, unavailable backend, failed Lotto refresh, invalid responses and stale data are distinct statuses. Results are stale after more than eight minutes without a successful official fetch.
+
+## API contract
+
+`GET /api/results` returns `schema_version`, `status`, `lotto_fetched_at` (Unix seconds or null), `server_time` (Unix seconds), Warsaw `lotto_time`/`sync_time` strings, and `results`.
+
+Each result has a stable `id`, `label`, and ordered `groups`. Each group has `label`, `kind` (`simple` or `additional`), and an integer `value` array. Backend snapshots replace previous results; neither component accumulates historical draws. The official all-games response determines how many groups are available.
+
+Ready responses use HTTP 200. `fetching`, `lotto_refresh_failed`, `stale`, and `backend_unavailable` use HTTP 503, with no displayed results. Invalid credentials use HTTP 401 and `access_denied`. Errors never expose upstream exceptions or tokens. Firmware rejects unsupported schema versions, duplicate game IDs, invalid values and unsupported group kinds.
+
+The backend validates all eight required games before atomic replacement, preserves the previous successful snapshot internally after failure, and retries on the four-minute schedule. Requests never initiate official Lotto calls. Payloads are bounded for ESP32 memory; groups support at most 100 values and 16 groups per game, with a 24 KB encoded result budget.
+
+## Tests and type checks, entirely in Docker
+
+```sh
+docker compose -f compose.test.yaml build tests
+docker compose -f compose.test.yaml run --rm tests
+docker compose -f compose.test.yaml run --rm tests composer typecheck
+docker compose -f compose.test.yaml run --rm firmware-tests
+```
+
+Backend feature tests use isolated real Redis and fake external Lotto responses. They verify snapshot replacement, access, scheduling/nonoverlap, errors and recovery. Native C++ tests exercise display-controller timing and touch behavior. Fixtures are synthetic examples based on the official schema; they are not verified live Lotto responses.
+
+Optional Docker compile check without touching the connected ESP32:
+
+```sh
+docker compose -f compose.test.yaml build firmware-build
+docker compose -f compose.test.yaml run --rm firmware-build
+```
+
+The first build downloads ESP32 tooling and can take several minutes. This compiles the sketch and does not upload. The baseline compiler image uses ESP32 core 3.3.0; Arduino IDE 3.3.x is the intended board-package family.
+
+## Physical smoke check still required
+
+After uploading, verify Polish glyphs, dark-mode readability at the viewing distance, touch calibration, paging, arrows and the lock. Then verify a live official response with your key and HTTPS connection with your configured token/root CA. Disconnect Wi-Fi, revoke a token and recreate the backend, stop the refresh worker for over eight minutes, and restart Redis; confirm each status and recovery. Tests cannot establish your panel driver, physical usability, live upstream grouping, or the actual VPS certificate chain.

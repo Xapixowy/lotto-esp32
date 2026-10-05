@@ -1,0 +1,8 @@
+services:
+  web:
+    environment:
+      SITE_ADDRESS: ${LOTTO_DOMAIN:?Set LOTTO_DOMAIN in .env}
+    ports: !override
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'

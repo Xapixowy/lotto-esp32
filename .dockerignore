@@ -1,0 +1,12 @@
+.git
+.env
+.tools
+backend/vendor
+backend/.env*
+!backend/.env.example
+backend/bootstrap/cache/*.php
+backend/storage/logs/*
+backend/.phpunit*
+firmware/build
+firmware/LottoDisplay/Secrets.h
+build

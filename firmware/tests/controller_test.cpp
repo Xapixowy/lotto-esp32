@@ -1,0 +1,78 @@
+#include "../LottoDisplay/Controller.h"
+#include <cassert>
+#include <iostream>
+
+int main() {
+    lotto::Controller screen;
+    assert(screen.pollDue(0));
+    screen.beginPoll(0);
+    assert(!screen.pollDue(14999));
+    assert(screen.pollDue(15000));
+    screen.connectionRestored();
+    assert(screen.pollDue(1000));
+    screen.beginPoll(1000);
+    assert(!screen.pollDue(15999));
+    assert(screen.pollDue(16000));
+    lotto::Snapshot snapshot;
+    snapshot.lottoFetchedAt = 1791201600;
+    snapshot.serverTime = 1791201600;
+    snapshot.lottoTime = "14:00:00";
+    snapshot.syncTime = "14:00:00";
+    snapshot.slides.push_back({"Lotto", "Lotto", {{"05.10.2026 14:00", "simple", {1,4,12,24,36,41}}}});
+    screen.receive(snapshot, 0);
+    auto view = screen.view(0);
+    assert(view.status == lotto::Status::Ready);
+    assert(view.title == "Lotto");
+    assert(view.values == std::vector<int>({1,4,12,24,36,41}));
+    assert(view.lottoTime == "14:00:00");
+    assert(view.syncTime == "14:00:00");
+    snapshot.slides.push_back({"Keno", "Keno", {{"05.10.2026 14:00", "simple", {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20}}}});
+    screen.receive(snapshot, 100);
+    screen.tick(10000);
+    assert(screen.view(10000).title == "Keno");
+    assert(screen.view(10000).values.size() == 12);
+    screen.tick(20000);
+    assert(screen.view(20000).page == 1);
+    assert(screen.view(20000).values == std::vector<int>({13,14,15,16,17,18,19,20}));
+    screen.touch(lotto::Touch::Lock, 21000);
+    assert(screen.view(21000).locked);
+    screen.tick(30000);
+    assert(screen.view(30000).title == "Keno");
+    assert(screen.view(30000).page == 0);
+    screen.touch(lotto::Touch::Next, 31000);
+    assert(screen.view(31000).title == "Lotto");
+    screen.tick(320999);
+    assert(screen.view(320999).locked);
+    screen.tick(321000);
+    assert(!screen.view(321000).locked);
+    assert(screen.view(321000).title == "Lotto");
+    screen.tick(330999);
+    assert(screen.view(330999).title == "Lotto");
+    screen.tick(331000);
+    assert(screen.view(331000).title == "Keno");
+    screen.touch(lotto::Touch::Lock, 331100);
+    screen.fail(lotto::Status::BackendUnreachable, 332000);
+    screen.touch(lotto::Touch::Next, 332100);
+    assert(screen.view(332100).status == lotto::Status::BackendUnreachable);
+    screen.tick(400000);
+    screen.receive(snapshot, 400000);
+    assert(screen.view(400000).title == "Keno");
+    assert(screen.view(400000).locked);
+    screen.tick(631100);
+    assert(!screen.view(631100).locked);
+    screen.tick(880001);
+    assert(screen.view(880001).status == lotto::Status::Stale);
+    lotto::Snapshot invalid = snapshot;
+    invalid.slides[0].groups[0].values.clear();
+    screen.receive(invalid, 880002);
+    assert(screen.view(880002).status == lotto::Status::InvalidResponse);
+    screen.receive(snapshot, 900000);
+    screen.touch(lotto::Touch::Previous, 900001);
+    assert(screen.view(900001).title == "Lotto");
+    screen.touch(lotto::Touch::Previous, 900002);
+    assert(screen.view(900002).title == "Keno");
+    screen.touch(lotto::Touch::Lock, 900003);
+    screen.touch(lotto::Touch::Lock, 900004);
+    assert(!screen.view(900004).locked);
+    std::cout << "Display controller: initial results passed\n";
+}

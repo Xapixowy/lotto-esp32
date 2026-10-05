@@ -1,0 +1,55 @@
+name: lotto-display-tests
+
+services:
+  redis:
+    image: redis:7.4-alpine
+    command: ['redis-server', '--save', '', '--appendonly', 'no']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 2s
+      timeout: 2s
+      retries: 10
+
+  tests:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: development
+    environment:
+      APP_ENV: testing
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      REDIS_CLIENT: predis
+      REDIS_DB: '14'
+      REDIS_CACHE_DB: '15'
+      API_USERS_JSON: '{"owner":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}'
+    volumes:
+      - ./backend/app:/srv/backend/app
+      - ./backend/config:/srv/backend/config
+      - ./backend/routes:/srv/backend/routes
+      - ./backend/tests:/srv/backend/tests
+      - ./backend/phpunit.xml:/srv/backend/phpunit.xml
+      - ./backend/phpstan.neon:/srv/backend/phpstan.neon
+      - ./backend/composer.json:/srv/backend/composer.json
+      - ./backend/composer.lock:/srv/backend/composer.lock
+      - ./backend/.env.example:/srv/backend/.env
+      - ./backend/bootstrap/app.php:/srv/backend/bootstrap/app.php
+      - ./tests:/srv/tests
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  firmware-tests:
+    image: gcc:14
+    working_dir: /src
+    volumes:
+      - ./firmware:/src:ro
+    command: ['sh', '-c', 'g++ -std=c++17 -Wall -Wextra -Werror tests/controller_test.cpp -o /tmp/controller-test && /tmp/controller-test']
+
+  firmware-build:
+    build:
+      context: .
+      dockerfile: docker/firmware.Dockerfile
+    volumes:
+      - ./firmware:/workspace/firmware:ro
+      - ./tests:/workspace/tests:ro
