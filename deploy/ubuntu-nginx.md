@@ -1,10 +1,10 @@
 # Ubuntu VPS with existing Nginx sites
 
-Use this path when host Nginx already serves other sites. Nginx handles public HTTPS; the Docker web service listens on `127.0.0.1:18090`. The existing papai staging site already uses ports 18000 and 18080. PHP-FPM and Redis remain internal. Use `compose.nginx.yaml` instead of `compose.production.yaml`. Before starting, check the VPS for a listener on port 18090 with `ss -ltn 'sport = :18090'`; if it is occupied, choose a free port and change both the Compose override and Nginx template.
+Use this path when host Nginx already serves other sites. Nginx handles public HTTPS and connects directly to PHP-FPM on `127.0.0.1:18090`. Docker runs only Laravel, its refresh worker and Redis. Caddy is disabled in this configuration. The existing papai staging site uses ports 18000 and 18080. Use `compose.nginx.yaml` instead of `compose.production.yaml`. Before starting, check for a listener on port 18090 with `ss -ltn 'sport = :18090'`; if occupied, choose a free port and change both the Compose override and Nginx template.
 
 ```text
 ESP32 → HTTPS :443 → host Nginx → 127.0.0.1:18090
-                                    → Docker Caddy → Laravel → Redis
+                                    → Docker PHP-FPM → Laravel → Redis
 ```
 
 The commands below use a deployment account named `lotto-deploy`. Substitute your actual VPS host, administrator account, public SSH-key path and domain. They prepare one new virtual host; keep existing sites enabled.
@@ -64,8 +64,7 @@ On the VPS, set `APP_URL=https://your-domain` and `LOTTO_DOMAIN=your-domain` in 
 cd /home/lotto-deploy/lotto-esp32
 chmod 600 .env config/users.json
 docker compose -f compose.yaml -f compose.nginx.yaml config --quiet
-docker compose -f compose.yaml -f compose.nginx.yaml up -d --build
-curl --fail http://127.0.0.1:18090/up
+docker compose -f compose.yaml -f compose.nginx.yaml up -d --build --remove-orphans backend refresh redis
 ```
 
 Always use both Compose files for this deployment, including when recreating services after user-file or environment changes:
@@ -115,14 +114,21 @@ The health endpoint should succeed and a request without a token should return 4
 
 Set firmware `BACKEND_URL` to `https://your-domain/api/results` and provide the root CA matching the issued certificate chain. Validate the connection on the actual ESP32 before completing issue #5.
 
-For code updates, as `lotto-deploy`:
+Port 18090 now speaks FastCGI, so `curl http://127.0.0.1:18090/up` no longer works. Test the public HTTPS hostname through Nginx instead.
+
+### One-time transition from Docker Caddy
+
+Install the updated `deploy/nginx/lotto.conf` as an administrator and run `nginx -t` first. Then, as `lotto-deploy`, stop the old web container before starting PHP-FPM on its former port:
 
 ```sh
 cd /home/lotto-deploy/lotto-esp32
-git pull --ff-only
-docker compose -f compose.yaml -f compose.nginx.yaml up -d --build
+git pull --ff-only origin main
+docker compose -f compose.yaml -f compose.nginx.yaml --profile standalone-web stop web
+docker compose -f compose.yaml -f compose.nginx.yaml up -d --build --remove-orphans backend refresh redis
 ```
 
-All Lotto Nginx settings are in `deploy/nginx/lotto.conf`, including HTTP redirect, TLS, trusted Cloudflare ranges and API proxying. It uses `lotto.jakubchodzinski.pl`; keep both `server_name` entries consistent with `LOTTO_DOMAIN`. During configuration updates, reinstall this single virtual-host file, validate with `sudo nginx -t`, then reload Nginx. No Lotto snippet files are required.
+Reload host Nginx as an administrator and check `https://lotto.jakubchodzinski.pl/up`. This transition has a short interruption while the port changes protocols. Complete it before enabling automatic deployments. Keep the previous configuration and images available until verified.
 
-These files have not provisioned the VPS or verified its existing configuration, public certificate, or device connection. Those checks require access to the actual server and board.
+Afterwards, use [GitHub Actions deployment](github-actions.md) for code updates. All Lotto Nginx settings remain in `deploy/nginx/lotto.conf`. Host Nginx configuration changes still require administrator installation, `nginx -t`, and reload; application deployments do not change shared server settings.
+
+The owner has verified that the existing server API works. The direct PHP-FPM transition and automated deployment still require verification on the actual server; device HTTPS remains a physical check.

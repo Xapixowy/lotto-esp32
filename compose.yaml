@@ -1,7 +1,7 @@
 name: lotto-display
 
 x-backend: &backend
-  image: lotto-display-backend
+  image: ${BACKEND_IMAGE:-lotto-display-backend}
   build:
     context: .
     dockerfile: docker/Dockerfile
