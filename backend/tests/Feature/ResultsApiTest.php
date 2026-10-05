@@ -28,7 +28,7 @@ class ResultsApiTest extends TestCase
         $this->withToken(str_repeat('a', 32))->getJson('/api/results')
             ->assertOk()->assertJsonPath('status', 'ready')
             ->assertJsonPath('results.0.label', 'Lotto')
-            ->assertJsonPath('results.0.groups.0.value', [1, 4, 12, 24, 36, 41]);
+            ->assertJsonPath('results.0.groups.0.numbers.*.value', [1, 4, 12, 24, 36, 41]);
         $this->withToken(str_repeat('a', 32))->getJson('/api/results')->assertOk();
         Http::assertSentCount(1);
     }

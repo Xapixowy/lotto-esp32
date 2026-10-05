@@ -15,7 +15,7 @@ inline Status responseStatus(const std::string& status) {
 }
 
 inline bool parseSnapshot(JsonVariantConst json, Snapshot& snapshot) {
-    if (!json["schema_version"].is<int>() || json["schema_version"].as<int>() != 1 ||
+    if (!json["schema_version"].is<int>() || json["schema_version"].as<int>() != 2 ||
         !json["status"].is<const char*>() || std::string(json["status"].as<const char*>()) != "ready" ||
         !json["lotto_fetched_at"].is<std::int64_t>() || !json["server_time"].is<std::int64_t>() ||
         !json["lotto_time"].is<const char*>() || !json["sync_time"].is<const char*>() ||
@@ -35,27 +35,20 @@ inline bool parseSnapshot(JsonVariantConst json, Snapshot& snapshot) {
         auto groups = item["groups"].as<JsonArrayConst>();
         if (groups.size() == 0 || groups.size() > 16) return false;
         for (JsonVariantConst itemGroup : groups) {
-            if (!itemGroup["label"].is<const char*>() || !itemGroup["kind"].is<const char*>() || !itemGroup["value"].is<JsonArrayConst>()) return false;
-            Group group{itemGroup["label"].as<std::string>(), itemGroup["kind"].as<std::string>(), {}};
-            if (group.label.empty() || group.label.size() > 128 || (group.kind != "simple" && group.kind != "additional")) return false;
-            auto values = itemGroup["value"].as<JsonArrayConst>();
-            if (values.size() == 0 || values.size() > MAX_GROUP_VALUES) return false;
-            for (JsonVariantConst value : values) {
-                if (!value.is<int>() || value.as<int>() < 0 || value.as<int>() > 999) return false;
-                group.values.push_back(value.as<int>());
-            }
-            if (!itemGroup["numbers"].isNull()) {
-                if (!itemGroup["numbers"].is<JsonArrayConst>()) return false;
-                auto numbers = itemGroup["numbers"].as<JsonArrayConst>();
-                if (numbers.size() != group.values.size()) return false;
-                std::size_t index = 0;
-                for (JsonVariantConst number : numbers) {
-                    if (!number["value"].is<int>() || number["value"].as<int>() != group.values[index++] ||
-                        !number["type"].is<const char*>()) return false;
-                    const std::string type = number["type"].as<std::string>();
-                    if (type != "simple" && type != "special") return false;
-                    group.special.push_back(type == "special");
-                }
+            if (!itemGroup["label"].is<const char*>() || !itemGroup["numbers"].is<JsonArrayConst>()) return false;
+            Group group{itemGroup["label"].as<std::string>(), "simple", {}};
+            if (group.label.empty() || group.label.size() > 128) return false;
+            auto numbers = itemGroup["numbers"].as<JsonArrayConst>();
+            if (numbers.size() == 0 || numbers.size() > MAX_GROUP_VALUES) return false;
+            for (JsonVariantConst number : numbers) {
+                if (!number["value"].is<int>() || number["value"].as<int>() < 0 || number["value"].as<int>() > 999 ||
+                    !number["type"].is<const char*>()) return false;
+                const int value = number["value"].as<int>();
+                if (!group.values.empty() && value < group.values.back()) return false;
+                const std::string type = number["type"].as<std::string>();
+                if (type != "simple" && type != "special") return false;
+                group.values.push_back(value);
+                group.special.push_back(type == "special");
             }
             slide.groups.push_back(std::move(group));
         }
