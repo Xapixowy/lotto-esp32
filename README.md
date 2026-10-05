@@ -114,7 +114,7 @@ docker compose -f compose.test.yaml run --rm tests composer typecheck
 docker compose -f compose.test.yaml run --rm firmware-tests
 ```
 
-Backend feature tests use isolated real Redis and fake external Lotto responses. They verify snapshot replacement, access, scheduling/nonoverlap, errors and recovery. Native C++ tests exercise display-controller timing and touch behavior. Fixtures are synthetic examples based on the official schema; they are not verified live Lotto responses.
+Backend feature tests use isolated real Redis and fake external Lotto responses. They verify snapshot replacement, access, scheduling/nonoverlap, errors and recovery. The startup-access integration test runs the actual configuration-caching entrypoint and a local HTTP server, checks two clients against the shared snapshot, then restarts with changed tokens and verifies access is granted/revoked without replacing the snapshot. Its configuration cache is isolated and removed afterward. Native C++ tests exercise display-controller timing and touch behavior. Fixtures are synthetic examples based on the official schema; they are not verified live Lotto responses.
 
 Optional Docker compile check without touching the connected ESP32:
 

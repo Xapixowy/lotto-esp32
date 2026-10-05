@@ -35,6 +35,7 @@ services:
       - ./backend/.env.example:/srv/backend/.env
       - ./backend/bootstrap/app.php:/srv/backend/bootstrap/app.php
       - ./tests:/srv/tests
+      - ./docker/entrypoint.sh:/srv/docker/entrypoint.sh:ro
     depends_on:
       redis:
         condition: service_healthy
