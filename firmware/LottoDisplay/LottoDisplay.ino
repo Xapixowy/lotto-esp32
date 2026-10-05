@@ -53,11 +53,8 @@ void requestResults(void*) {
             if ((code == 200 || code == 503) && (length == -1 || (length > 0 && length <= 32768))) {
                 BoundedBody body;
                 JsonDocument json;
-                if (http.writeToStream(&body) > 0 && !body.overflow && !deserializeJson(json, body.body) && json["schema_version"].is<int>() && json["schema_version"].as<int>() == 1) {
-                    auto payloadStatus = json["status"].as<std::string>();
-                    if (code == 200 && payloadStatus == "ready" && lotto::parseSnapshot(json.as<JsonVariantConst>(), snapshot)) status = lotto::Status::Ready;
-                    else if (code == 503 && payloadStatus != "ready") status = lotto::responseStatus(payloadStatus);
-                    else status = lotto::Status::InvalidResponse;
+                if (http.writeToStream(&body) > 0 && !body.overflow && !deserializeJson(json, body.body)) {
+                    status = lotto::parseResultsResponse(code, json.as<JsonVariantConst>(), snapshot);
                 } else status = lotto::Status::InvalidResponse;
             } else if (code == 200) status = lotto::Status::InvalidResponse;
             http.end();

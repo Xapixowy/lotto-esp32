@@ -12,6 +12,11 @@ int main(int argc, char** argv) {
     buffer << file.rdbuf();
     JsonDocument json;
     assert(!deserializeJson(json, buffer.str()));
+    lotto::Snapshot responseSnapshot;
+    assert(lotto::parseResultsResponse(200, json.as<JsonVariantConst>(), responseSnapshot) == lotto::Status::Ready);
+    lotto::Controller responseController;
+    responseController.receive(responseSnapshot, 0);
+    assert(responseController.view(0).status == lotto::Status::Ready);
     lotto::Snapshot snapshot;
     assert(lotto::parseSnapshot(json.as<JsonVariantConst>(), snapshot));
     assert(snapshot.slides.size() == 8);
@@ -68,6 +73,16 @@ int main(int argc, char** argv) {
     extra["type"] = "simple";
     lotto::Snapshot oversized;
     assert(!lotto::parseSnapshot(json.as<JsonVariantConst>(), oversized));
+    JsonDocument error;
+    error["schema_version"] = 2;
+    error["status"] = "fetching";
+    lotto::Snapshot ignored;
+    assert(lotto::parseResultsResponse(503, error.as<JsonVariantConst>(), ignored) == lotto::Status::Fetching);
+    error["schema_version"] = 1;
+    assert(lotto::parseResultsResponse(503, error.as<JsonVariantConst>(), ignored) == lotto::Status::InvalidResponse);
+    error["schema_version"] = 2;
+    error["status"] = "ready";
+    assert(lotto::parseResultsResponse(503, error.as<JsonVariantConst>(), ignored) == lotto::Status::InvalidResponse);
     assert(lotto::responseStatus("access_denied") == lotto::Status::AccessDenied);
     assert(lotto::responseStatus("fetching") == lotto::Status::Fetching);
     assert(lotto::responseStatus("lotto_refresh_failed") == lotto::Status::LottoFailed);
