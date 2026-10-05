@@ -44,6 +44,19 @@ inline bool parseSnapshot(JsonVariantConst json, Snapshot& snapshot) {
                 if (!value.is<int>() || value.as<int>() < 0 || value.as<int>() > 999) return false;
                 group.values.push_back(value.as<int>());
             }
+            if (!itemGroup["numbers"].isNull()) {
+                if (!itemGroup["numbers"].is<JsonArrayConst>()) return false;
+                auto numbers = itemGroup["numbers"].as<JsonArrayConst>();
+                if (numbers.size() != group.values.size()) return false;
+                std::size_t index = 0;
+                for (JsonVariantConst number : numbers) {
+                    if (!number["value"].is<int>() || number["value"].as<int>() != group.values[index++] ||
+                        !number["type"].is<const char*>()) return false;
+                    const std::string type = number["type"].as<std::string>();
+                    if (type != "simple" && type != "special") return false;
+                    group.special.push_back(type == "special");
+                }
+            }
             slide.groups.push_back(std::move(group));
         }
         snapshot.slides.push_back(std::move(slide));

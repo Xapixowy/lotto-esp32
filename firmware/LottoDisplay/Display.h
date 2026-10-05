@@ -77,7 +77,7 @@ public:
                 auto width = text_.getUTF8Width(value.c_str());
                 print(10 + static_cast<int>(i % 5) * 60 + (56 - width) / 2,
                       101 + static_cast<int>(i / 5) * 27, value.c_str(), u8g2_font_helvB24_tn,
-                      view.kind == "additional" ? ACCENT : FOREGROUND);
+                      ((i < view.special.size() && view.special[i]) || (view.special.empty() && view.kind == "additional")) ? ACCENT : FOREGROUND);
             }
             lcd_.drawFastHLine(8, 190, 304, SECONDARY);
             print(8, 209, ("Lotto: " + view.lottoTime).c_str());
@@ -109,7 +109,7 @@ private:
 
     static bool sameContent(const lotto::View& a, const lotto::View& b) {
         return a.status == b.status && a.title == b.title && a.groupLabel == b.groupLabel &&
-            a.kind == b.kind && a.values == b.values && a.lottoTime == b.lottoTime &&
+            a.kind == b.kind && a.values == b.values && a.special == b.special && a.lottoTime == b.lottoTime &&
             a.syncTime == b.syncTime && a.page == b.page && a.pages == b.pages && a.locked == b.locked;
     }
 

@@ -16,6 +16,7 @@ struct Group {
     std::string label;
     std::string kind;
     std::vector<int> values;
+    std::vector<bool> special = {};
 };
 
 struct Slide {
@@ -38,6 +39,7 @@ struct View {
     std::string groupLabel;
     std::string kind;
     std::vector<int> values;
+    std::vector<bool> special = {};
     std::string lottoTime;
     std::string syncTime;
     std::size_t page = 0;
@@ -62,7 +64,7 @@ public:
                 return;
             }
             for (const auto& group : slide.groups) {
-                if (group.label.empty() || group.values.empty() || group.values.size() > MAX_GROUP_VALUES || (group.kind != "simple" && group.kind != "additional")) {
+                if (group.label.empty() || group.values.empty() || group.values.size() > MAX_GROUP_VALUES || (!group.special.empty() && group.special.size() != group.values.size()) || (group.kind != "simple" && group.kind != "additional")) {
                     fail(Status::InvalidResponse, now);
                     return;
                 }
@@ -147,6 +149,7 @@ public:
         result.groupLabel = group.label;
         result.kind = group.kind;
         result.values = group.values;
+        result.special = group.special;
         result.page = page_;
         result.pages = pageCount(slide);
         result.locked = locked_;
