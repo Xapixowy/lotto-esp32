@@ -1,4 +1,6 @@
 .git
+config/users.json
+backend/config/users.json
 .env
 .tools
 backend/vendor

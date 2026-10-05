@@ -17,6 +17,14 @@ x-backend: &backend
     SESSION_DRIVER: array
     QUEUE_CONNECTION: sync
     LOG_CHANNEL: stderr
+    API_USERS_FILE: /run/lotto/users.json
+  volumes:
+    - type: bind
+      source: ./config/users.json
+      target: /run/lotto/users.json
+      read_only: true
+      bind:
+        create_host_path: false
   restart: unless-stopped
   depends_on:
     redis:

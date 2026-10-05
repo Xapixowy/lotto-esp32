@@ -22,7 +22,7 @@ services:
       REDIS_CLIENT: predis
       REDIS_DB: '14'
       REDIS_CACHE_DB: '15'
-      API_USERS_JSON: '{"owner":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}'
+      API_USERS_FILE: /srv/tests/fixtures/users.json
     volumes:
       - ./backend/app:/srv/backend/app
       - ./backend/config:/srv/backend/config
@@ -35,6 +35,7 @@ services:
       - ./backend/.env.example:/srv/backend/.env
       - ./backend/bootstrap/app.php:/srv/backend/bootstrap/app.php
       - ./tests:/srv/tests
+      - ./docker/entrypoint.sh:/srv/docker/entrypoint.sh:ro
     depends_on:
       redis:
         condition: service_healthy

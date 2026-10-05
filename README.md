@@ -8,6 +8,7 @@ You need Docker with Compose. PHP, Composer, Redis, and a web server run inside 
 
 ```sh
 cp .env.example .env
+cp config/users.example.json config/users.json
 docker compose build
 docker compose run --rm --no-deps --entrypoint php backend artisan key:generate --show
 ```
@@ -18,13 +19,16 @@ Copy the generated `base64:…` value into `APP_KEY` in `.env`. Set `LOTTO_API_K
 docker compose run --rm --no-deps --entrypoint php backend -r 'echo bin2hex(random_bytes(32)), PHP_EOL;'
 ```
 
-Put the tokens in `.env`, for example:
+Put the tokens in the private `config/users.json` file, for example:
 
-```dotenv
-API_USERS_JSON='{"owner":"your-generated-token","guest":"another-generated-token"}'
+```json
+{
+  "owner": "your-generated-token",
+  "guest": "another-generated-token"
+}
 ```
 
-These are named API permissions, with no login or registration. Each token grants the same read access. Use at least 32 characters per token; placeholder tokens are rejected. Keep `.env` private.
+These are named API permissions, with no login or registration. Each token grants the same read access. Use at least 32 characters per token; placeholder tokens are rejected. Keep `.env` and `config/users.json` private. Docker mounts the JSON file read-only into the backend and refresh worker; it is excluded from Git and image builds. Missing, malformed or invalid user configuration denies API access. `API_USERS_JSON` is no longer used.
 
 ```sh
 docker compose up -d
@@ -35,7 +39,7 @@ The local endpoint is `http://localhost:8080/api/results`. Supply `Authorization
 
 `backend` runs PHP-FPM, `web` proxies requests through Caddy, `refresh` fetches independently, and `redis` holds results. Redis has no published port or persistent volume. Restarting Redis clears results; the worker refetches within five seconds when the cache is empty. Multiple worker instances share a Redis lock and due-time marker, so they do not multiply upstream calls.
 
-After editing `.env`, recreate both Laravel services so their startup-cached configuration agrees:
+After editing `.env` or `config/users.json`, recreate both Laravel services so their startup-cached configuration agrees. Changes to the JSON file do not grant or revoke access until recreation:
 
 ```sh
 docker compose up -d --force-recreate backend refresh
@@ -114,7 +118,7 @@ docker compose -f compose.test.yaml run --rm tests composer typecheck
 docker compose -f compose.test.yaml run --rm firmware-tests
 ```
 
-Backend feature tests use isolated real Redis and fake external Lotto responses. They verify snapshot replacement, access, scheduling/nonoverlap, errors and recovery. Native C++ tests exercise display-controller timing and touch behavior. Fixtures are synthetic examples based on the official schema; they are not verified live Lotto responses.
+Backend feature tests use isolated real Redis and fake external Lotto responses. They verify snapshot replacement, access, scheduling/nonoverlap, errors and recovery. The startup-access integration test runs the actual configuration-caching entrypoint and a local HTTP server, checks two clients against the shared snapshot, edits the private JSON file, and verifies permissions change only after restart without replacing the snapshot. Its configuration cache and user file are isolated and removed afterward. Native C++ tests exercise display-controller timing and touch behavior. Most fixtures are synthetic; `lotto-upstream.authenticated.json` contains only public draw fields from one authenticated official response on 5 October 2026. Its regression checks selected games, excludes Plus/Premia, and verifies additional groups and Warsaw draw times without live requests during tests.
 
 Optional Docker compile check without touching the connected ESP32:
 
@@ -127,4 +131,4 @@ The first build downloads ESP32 tooling and can take several minutes. This compi
 
 ## Physical smoke check still required
 
-After uploading, verify Polish glyphs, dark-mode readability at the viewing distance, touch calibration, paging, arrows and the lock. Then verify a live official response with your key and HTTPS connection with your configured token/root CA. Disconnect Wi-Fi, revoke a token and recreate the backend, stop the refresh worker for over eight minutes, and restart Redis; confirm each status and recovery. Tests cannot establish your panel driver, physical usability, live upstream grouping, or the actual VPS certificate chain.
+After uploading, verify Polish glyphs, dark-mode readability at the viewing distance, touch calibration, paging, arrows and the lock. Then verify live results on the device and HTTPS connection with your configured token/root CA. Disconnect Wi-Fi, revoke a token in `config/users.json` and recreate the backend, stop the refresh worker for over eight minutes, and restart Redis; confirm each status and recovery. One authenticated official response has validated all eight backend mappings; tests cannot establish your panel driver, physical usability or the actual VPS certificate chain.
