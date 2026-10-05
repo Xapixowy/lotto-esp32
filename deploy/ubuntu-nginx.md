@@ -75,7 +75,7 @@ Ensure the domain's DNS points to the VPS. If there is an AAAA record, its IPv6 
 As an administrator, render the new site with your actual domain:
 
 ```sh
-sed 's/lotto.example.com/your-domain/g' /srv/lotto-esp32/deploy/nginx/lotto.conf > /tmp/lotto-nginx.conf
+sudo sed 's/lotto.example.com/your-domain/g' /srv/lotto-esp32/deploy/nginx/lotto.conf > /tmp/lotto-nginx.conf
 sudo install -m 644 /tmp/lotto-nginx.conf /etc/nginx/sites-available/lotto
 sudo ln -s /etc/nginx/sites-available/lotto /etc/nginx/sites-enabled/lotto
 sudo nginx -t
