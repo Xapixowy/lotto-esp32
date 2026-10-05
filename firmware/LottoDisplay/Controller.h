@@ -10,6 +10,7 @@ namespace lotto {
 enum class Status { Ready, Fetching, WifiDisconnected, BackendUnreachable, AccessDenied,
                     BackendUnavailable, LottoFailed, Stale, InvalidResponse };
 enum class Touch { Previous, Next, Lock };
+constexpr std::size_t MAX_GROUP_VALUES = 20;
 
 struct Group {
     std::string label;
@@ -61,7 +62,7 @@ public:
                 return;
             }
             for (const auto& group : slide.groups) {
-                if (group.label.empty() || group.values.empty() || (group.kind != "simple" && group.kind != "additional")) {
+                if (group.label.empty() || group.values.empty() || group.values.size() > MAX_GROUP_VALUES || (group.kind != "simple" && group.kind != "additional")) {
                     fail(Status::InvalidResponse, now);
                     return;
                 }
@@ -146,16 +147,10 @@ public:
         if (status_ != Status::Ready || snapshot_.slides.empty()) return result;
         const auto& slide = snapshot_.slides[slide_];
         result.title = slide.label;
-        std::size_t remaining = page_;
-        for (const auto& group : slide.groups) {
-            auto pages = (group.values.size() + 11) / 12;
-            if (remaining >= pages) { remaining -= pages; continue; }
-            result.groupLabel = group.label;
-            result.kind = group.kind;
-            auto begin = group.values.begin() + remaining * 12;
-            result.values.assign(begin, begin + std::min<std::size_t>(12, group.values.size() - remaining * 12));
-            break;
-        }
+        const auto& group = slide.groups[page_];
+        result.groupLabel = group.label;
+        result.kind = group.kind;
+        result.values = group.values;
         result.page = page_;
         result.pages = pageCount(slide);
         result.locked = locked_;
@@ -174,9 +169,7 @@ public:
 
 private:
     static std::size_t pageCount(const Slide& slide) {
-        std::size_t count = 0;
-        for (const auto& group : slide.groups) count += (group.values.size() + 11) / 12;
-        return std::max<std::size_t>(1, count);
+        return slide.groups.size();
     }
 
     Snapshot snapshot_;

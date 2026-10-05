@@ -39,7 +39,7 @@ inline bool parseSnapshot(JsonVariantConst json, Snapshot& snapshot) {
             Group group{itemGroup["label"].as<std::string>(), itemGroup["kind"].as<std::string>(), {}};
             if (group.label.empty() || group.label.size() > 128 || (group.kind != "simple" && group.kind != "additional")) return false;
             auto values = itemGroup["value"].as<JsonArrayConst>();
-            if (values.size() == 0 || values.size() > 100) return false;
+            if (values.size() == 0 || values.size() > MAX_GROUP_VALUES) return false;
             for (JsonVariantConst value : values) {
                 if (!value.is<int>() || value.as<int>() < 0 || value.as<int>() > 999) return false;
                 group.values.push_back(value.as<int>());

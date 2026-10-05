@@ -25,6 +25,14 @@ int main(int argc, char** argv) {
     json["results"][0]["groups"][0]["value"][0] = "1";
     lotto::Snapshot wrongType;
     assert(!lotto::parseSnapshot(json.as<JsonVariantConst>(), wrongType));
+    auto values = json["results"][0]["groups"][0]["value"].to<JsonArray>();
+    for (int number = 1; number <= 20; ++number) values.add(number);
+    lotto::Snapshot fullGroup;
+    assert(lotto::parseSnapshot(json.as<JsonVariantConst>(), fullGroup));
+    assert(fullGroup.slides[0].groups[0].values.size() == 20);
+    values.add(21);
+    lotto::Snapshot oversized;
+    assert(!lotto::parseSnapshot(json.as<JsonVariantConst>(), oversized));
     assert(lotto::responseStatus("access_denied") == lotto::Status::AccessDenied);
     assert(lotto::responseStatus("fetching") == lotto::Status::Fetching);
     assert(lotto::responseStatus("lotto_refresh_failed") == lotto::Status::LottoFailed);

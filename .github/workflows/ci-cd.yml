@@ -25,6 +25,7 @@ jobs:
       - name: Firmware tests and Arduino compilation
         run: |
           docker compose -f compose.test.yaml run --rm firmware-tests
+          docker compose -f compose.test.yaml run --rm firmware-build sh -c 'g++ -std=c++17 -Wall -Wextra -Werror -I/root/Arduino/libraries/ArduinoJson/src firmware/tests/payload_test.cpp -o /tmp/payload-test && /tmp/payload-test tests/fixtures/results.json'
           docker compose -f compose.test.yaml run --rm firmware-build
       - name: Validate deployment scripts and production HTTP access
         run: |

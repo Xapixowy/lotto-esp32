@@ -75,8 +75,8 @@ public:
                 auto value = std::to_string(view.values[i]);
                 text_.setFont(u8g2_font_helvB24_tn);
                 auto width = text_.getUTF8Width(value.c_str());
-                print(10 + static_cast<int>(i % 4) * 76 + (70 - width) / 2,
-                      107 + static_cast<int>(i / 4) * 36, value.c_str(), u8g2_font_helvB24_tn,
+                print(10 + static_cast<int>(i % 5) * 60 + (56 - width) / 2,
+                      101 + static_cast<int>(i / 5) * 27, value.c_str(), u8g2_font_helvB24_tn,
                       view.kind == "additional" ? ACCENT : FOREGROUND);
             }
             lcd_.drawFastHLine(8, 190, 304, SECONDARY);

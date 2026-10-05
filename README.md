@@ -1,6 +1,6 @@
 # Lotto Display
 
-Polish lottery results on an ESP32 Cheap Yellow Display, backed by a Dockerized Laravel API and ephemeral Redis. No database. The backend replaces one shared snapshot every four minutes; devices read it every 15 seconds. Dark-mode results use large numbers and paginated groups.
+Polish lottery results on an ESP32 Cheap Yellow Display, backed by a Dockerized Laravel API and ephemeral Redis. No database. The backend replaces one shared snapshot every four minutes; devices read it every 15 seconds. Dark-mode results use large numbers and show one complete result group at a time.
 
 ## Run the backend with Docker
 
@@ -99,7 +99,7 @@ Language is Polish. Rebuild and upload after changing credentials. Firmware uses
 ## Display behavior
 
 - Order and content come from the backend: Lotto, Mini Lotto, Multi Multi, Ekstra Pensja, Keno, Szybkie 600, Eurojackpot, Kaskada by default.
-- Each slide has labeled groups. One page holds up to 12 numbers; long groups get additional pages. Each page stays for 10 seconds before the next page/game.
+- Each slide has labeled groups. One group fits on one screen: up to 20 numbers in a five-column, four-row grid using the large number font. Groups are never split or scrolled. Each group stays for 10 seconds before the next group/game; oversized groups show a data error rather than truncated results.
 - Arrows wrap between games. The bottom-right lock holds a game for five minutes while its pages continue rotating. Arrows do not extend the lock. Tap the lock again to unlock immediately.
 - The top progress line shrinks until the next game, counting all remaining pages. It resets on manual navigation and stays gray while locked. Arrow and lock taps briefly invert the button colors for 150 ms.
 - `Lotto` and `Sync` appear at bottom-left in Warsaw time. They mean the last successful upstream fetch and last successful device retrieval, respectively, rather than draw times.
@@ -114,7 +114,7 @@ Each result has a stable `id`, `label`, and ordered `groups`. Each group has `la
 
 Ready responses use HTTP 200. `fetching`, `lotto_refresh_failed`, `stale`, and `backend_unavailable` use HTTP 503, with no displayed results. Invalid credentials use HTTP 401 and `access_denied`. Errors never expose upstream exceptions or tokens. Firmware rejects unsupported schema versions, duplicate game IDs, invalid values and unsupported group kinds.
 
-The backend validates all eight required games before atomic replacement, preserves the previous successful snapshot internally after failure, and retries on the four-minute schedule. Requests never initiate official Lotto calls. Payloads are bounded for ESP32 memory; groups support at most 100 values and 16 groups per game, with a 24 KB encoded result budget.
+The backend validates all eight required games before atomic replacement, preserves the previous successful snapshot internally after failure, and retries on the four-minute schedule. Requests never initiate official Lotto calls. Backend payloads support at most 100 values and 16 groups per game, with a 24 KB encoded result budget. Firmware accepts up to 20 values per group so each complete group fits on one screen.
 
 ## Tests and type checks, entirely in Docker
 
