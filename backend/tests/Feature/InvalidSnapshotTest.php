@@ -11,7 +11,7 @@ class InvalidSnapshotTest extends TestCase
 {
     public static function invalidCases(): array
     {
-        return [['missing-game'], ['empty-values'], ['wrong-type'], ['invalid-date'], ['unknown-top-level']];
+        return [['missing-game'], ['empty-values'], ['wrong-type'], ['invalid-date'], ['impossible-date'], ['unknown-top-level']];
     }
 
     #[DataProvider('invalidCases')]
@@ -31,6 +31,8 @@ class InvalidSnapshotTest extends TestCase
         } elseif ($case === 'invalid-date') {
             $bad[0]['drawDate'] = 'invalid';
             $bad[0]['results'][0]['drawDate'] = 'invalid';
+        } elseif ($case === 'impossible-date') {
+            $bad[0]['results'][0]['drawDate'] = '2026-02-30T20:00:00';
         } else {
             $bad = ['items' => $rows];
         }

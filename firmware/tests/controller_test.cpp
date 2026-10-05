@@ -8,6 +8,11 @@ int main() {
     screen.beginPoll(0);
     assert(!screen.pollDue(14999));
     assert(screen.pollDue(15000));
+    screen.connectionRestored();
+    assert(screen.pollDue(1000));
+    screen.beginPoll(1000);
+    assert(!screen.pollDue(15999));
+    assert(screen.pollDue(16000));
     lotto::Snapshot snapshot;
     snapshot.lottoFetchedAt = 1791201600;
     snapshot.serverTime = 1791201600;

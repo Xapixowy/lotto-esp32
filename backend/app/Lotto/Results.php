@@ -64,7 +64,8 @@ class Results
                     continue;
                 }
                 $date = $result['drawDate'] ?? $row['drawDate'];
-                if (! is_string($date) || ! preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/', $date)) {
+                if (! is_string($date) || ! preg_match('/^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)(?:\.\d{1,7})?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)?$/', $date, $parts)
+                    || ! checkdate((int) $parts[2], (int) $parts[3], (int) $parts[1])) {
                     throw new InvalidArgumentException('Invalid draw date');
                 }
                 $drawLabel = CarbonImmutable::parse($date, 'Europe/Warsaw')->timezone('Europe/Warsaw')->format('d.m.Y H:i');
@@ -98,6 +99,9 @@ class Results
         ]);
     }
 
+    /**
+     * @return array{schema_version: int, status: string, lotto_fetched_at: int|null, server_time: int, lotto_time: string|null, sync_time: string, results: list<array{id: string, label: string, groups: list<array{label: string, kind: string, value: list<int>}>}>}
+     */
     public function read(): array
     {
         $snapshot = Cache::store('redis')->get('lotto:snapshot') ?? [

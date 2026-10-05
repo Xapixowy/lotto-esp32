@@ -22,6 +22,7 @@ bool responsePending = false;
 lotto::Status receivedStatus = lotto::Status::Fetching;
 lotto::Snapshot receivedSnapshot;
 bool requestRunning = false;
+bool wasConnected = false;
 
 std::uint64_t clockMillis() {
     return static_cast<std::uint64_t>(esp_timer_get_time() / 1000);
@@ -97,17 +98,20 @@ void setup() {
 void loop() {
     const auto now = clockMillis();
     if (!DISPLAY_CHECK_ONLY) {
-        if (WiFi.status() != WL_CONNECTED) controller.fail(lotto::Status::WifiDisconnected, now);
+        const bool connected = WiFi.status() == WL_CONNECTED;
+        if (connected && !wasConnected) controller.connectionRestored();
+        wasConnected = connected;
         if (requestRunning && xSemaphoreTake(responseMutex, 0) == pdTRUE) {
             if (responsePending) {
-                if (receivedStatus == lotto::Status::Ready) controller.receive(receivedSnapshot, now);
+                if (receivedStatus == lotto::Status::Ready && connected) controller.receive(receivedSnapshot, now);
                 else controller.fail(receivedStatus, now);
                 responsePending = false;
                 requestRunning = false;
             }
             xSemaphoreGive(responseMutex);
         }
-        if (!requestRunning && WiFi.status() == WL_CONNECTED && controller.pollDue(now)) {
+        if (!connected) controller.fail(lotto::Status::WifiDisconnected, now);
+        if (!requestRunning && connected && controller.pollDue(now)) {
             controller.beginPoll(now);
             requestRunning = true;
             if (xTaskCreate(requestResults, "lotto-poll", 12288, nullptr, 1, nullptr) != pdPASS) {

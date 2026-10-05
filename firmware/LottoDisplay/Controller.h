@@ -90,6 +90,10 @@ public:
         return !hasPolled_ || now - lastPolledAt_ >= 15000;
     }
 
+    void connectionRestored() {
+        hasPolled_ = false;
+    }
+
     void beginPoll(std::uint64_t now) {
         hasPolled_ = true;
         lastPolledAt_ = now;
