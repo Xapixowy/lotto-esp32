@@ -53,7 +53,7 @@ docker compose down
 
 ## Deploy on a VPS
 
-If your Ubuntu VPS already uses Nginx for other sites, follow [the Nginx deployment guide](deploy/ubuntu-nginx.md). It covers a dedicated `lotto-deploy` user, private settings, loopback-only Docker port 18090, and a separate virtual host for Cloudflare proxying with Full (strict). A direct-VPS Certbot alternative is included. Use `compose.nginx.yaml` for that path.
+If your Ubuntu VPS already uses Nginx for other sites, follow [the Nginx deployment guide](deploy/ubuntu-nginx.md). It covers a dedicated `lotto-deploy` user, private settings, loopback-only Docker port 18090, and a separate virtual host for Cloudflare proxying with Full (strict). Use `compose.nginx.yaml` for that path.
 
 For a VPS where Caddy should own public ports 80/443, use the following path:
 
