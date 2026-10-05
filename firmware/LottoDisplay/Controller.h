@@ -43,6 +43,9 @@ struct View {
     std::size_t pages = 0;
     bool locked = false;
     bool refreshing = false;
+    std::uint16_t gameRemainingPermille = 1000;
+    bool touchFeedback = false;
+    Touch touchedControl = Touch::Previous;
 };
 
 class Controller {
@@ -84,6 +87,7 @@ public:
     void fail(Status status, std::uint64_t) {
         status_ = status;
         refreshing_ = false;
+        hasTouched_ = false;
     }
 
     bool pollDue(std::uint64_t now) const {
@@ -122,6 +126,9 @@ public:
     void touch(Touch action, std::uint64_t now) {
         tick(now);
         if (status_ != Status::Ready || snapshot_.slides.empty()) return;
+        hasTouched_ = true;
+        touchedAt_ = now;
+        touchedControl_ = action;
         if (action == Touch::Lock) {
             locked_ = !locked_;
             if (locked_) lockedAt_ = now;
@@ -133,7 +140,7 @@ public:
         }
     }
 
-    View view(std::uint64_t) const {
+    View view(std::uint64_t now) const {
         View result;
         result.status = status_;
         if (status_ != Status::Ready || snapshot_.slides.empty()) return result;
@@ -152,6 +159,13 @@ public:
         result.page = page_;
         result.pages = pageCount(slide);
         result.locked = locked_;
+        if (!locked_) {
+            const auto elapsed = std::min<std::uint64_t>(now - pageStartedAt_, 10000);
+            const auto remaining = (result.pages - page_) * 10000 - elapsed;
+            result.gameRemainingPermille = static_cast<std::uint16_t>(remaining * 1000 / (result.pages * 10000));
+        }
+        result.touchFeedback = hasTouched_ && now - touchedAt_ < 150;
+        result.touchedControl = touchedControl_;
         result.refreshing = refreshing_;
         result.lottoTime = snapshot_.lottoTime;
         result.syncTime = snapshot_.syncTime;
@@ -176,6 +190,9 @@ private:
     bool refreshing_ = false;
     bool hasPolled_ = false;
     std::uint64_t lastPolledAt_ = 0;
+    bool hasTouched_ = false;
+    std::uint64_t touchedAt_ = 0;
+    Touch touchedControl_ = Touch::Previous;
 };
 
 } // namespace lotto
