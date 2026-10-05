@@ -28,8 +28,9 @@ class WorkResults extends Command
                 if (! $results->refresh()) {
                     $this->error('Lotto refresh failed; the next attempt is scheduled in four minutes.');
                 }
-            } catch (Throwable) {
-                $this->error('Redis is unavailable; reconnecting.');
+            } catch (Throwable $exception) {
+                report($exception);
+                $this->error('Results refresh encountered an error; retrying.');
             }
             sleep(5);
         }

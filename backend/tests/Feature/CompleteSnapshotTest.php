@@ -31,7 +31,7 @@ class CompleteSnapshotTest extends TestCase
         $response = $this->withToken(str_repeat('a', 32))->getJson('/api/results')->assertOk()
             ->assertJsonCount(8, 'results')
             ->assertJsonCount(1, 'results.6.groups')
-            ->assertJsonPath('results.6.groups.0.value', [3, 5, 9, 12, 23, 34, 45])
+            ->assertJsonPath('results.6.groups.0.numbers.*.value', [3, 5, 9, 12, 23, 34, 45])
             ->assertJsonPath('results.6.groups.0.numbers.0.type', 'special')
             ->assertJsonPath('results.0.groups.0.label', '05.10.2026 14:00');
         $expected = json_decode(file_get_contents(base_path('../tests/fixtures/results.json')), true);
@@ -39,7 +39,7 @@ class CompleteSnapshotTest extends TestCase
         $this->travel(4)->minutes();
         $this->artisan('lotto:refresh')->assertExitCode(0);
         $this->withToken(str_repeat('a', 32))->getJson('/api/results')->assertJsonCount(8, 'results')
-            ->assertJsonPath('results.0.groups.0.value', [7, 8, 9]);
+            ->assertJsonPath('results.0.groups.0.numbers.*.value', [7, 8, 9]);
         Http::assertSentCount(2);
     }
 
@@ -63,19 +63,19 @@ class CompleteSnapshotTest extends TestCase
             ->assertJsonCount(8, 'results')
             ->assertJsonPath('results.0.id', 'Lotto')
             ->assertJsonCount(1, 'results.0.groups')
-            ->assertJsonPath('results.0.groups.0.value', [6, 12, 15, 31, 32, 43])
+            ->assertJsonPath('results.0.groups.0.numbers.*.value', [6, 12, 15, 31, 32, 43])
             ->assertJsonPath('results.0.groups.0.label', '03.10.2026 22:00')
             ->assertJsonCount(1, 'results.2.groups')
-            ->assertJsonCount(20, 'results.2.groups.0.value')
+            ->assertJsonCount(20, 'results.2.groups.0.numbers')
             ->assertJsonCount(1, 'results.3.groups')
-            ->assertJsonPath('results.3.groups.0.value', [2, 3, 3, 11, 19, 24])
+            ->assertJsonPath('results.3.groups.0.numbers.*.value', [2, 3, 3, 11, 19, 24])
             ->assertJsonPath('results.3.groups.0.numbers.1.type', 'simple')
             ->assertJsonPath('results.3.groups.0.numbers.2.type', 'special')
-            ->assertJsonCount(20, 'results.4.groups.0.value')
+            ->assertJsonCount(20, 'results.4.groups.0.numbers')
             ->assertJsonPath('results.4.groups.0.label', '05.10.2026 18:34')
             ->assertJsonPath('results.5.id', 'Szybkie600')
             ->assertJsonCount(1, 'results.6.groups')
-            ->assertJsonPath('results.6.groups.0.value', [4, 6, 7, 7, 12, 17, 45])
+            ->assertJsonPath('results.6.groups.0.numbers.*.value', [4, 6, 7, 7, 12, 17, 45])
             ->assertJsonPath('results.6.groups.0.numbers.2.type', 'simple')
             ->assertJsonPath('results.6.groups.0.numbers.3.type', 'special')
             ->assertJsonPath('results.6.groups.0.numbers.4.type', 'special');
@@ -83,9 +83,9 @@ class CompleteSnapshotTest extends TestCase
         $this->assertSame([['value' => 22, 'type' => 'special']], array_values(array_filter($multiNumbers, fn (array $number): bool => $number['type'] === 'special')));
         foreach ($response->json('results') as $slide) {
             foreach ($slide['groups'] as $group) {
-                $sorted = $group['value'];
+                $sorted = array_column($group['numbers'], 'value');
                 sort($sorted, SORT_NUMERIC);
-                $this->assertSame($sorted, $group['value']);
+                $this->assertSame($sorted, array_column($group['numbers'], 'value'));
             }
         }
         $this->assertSame([

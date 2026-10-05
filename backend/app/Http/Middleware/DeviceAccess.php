@@ -13,11 +13,11 @@ class DeviceAccess
         $token = $request->bearerToken();
         $users = config('lotto.users');
         if (! is_array($users) || $users === [] || array_is_list($users)) {
-            return response()->json(['schema_version' => 1, 'status' => 'backend_unavailable'], 503);
+            return response()->json(['schema_version' => 2, 'status' => 'backend_unavailable'], 503);
         }
         foreach ($users as $name => $configured) {
             if (! is_string($name) || $name === '' || ! is_string($configured) || strlen($configured) < 32 || str_contains($configured, 'REPLACE_')) {
-                return response()->json(['schema_version' => 1, 'status' => 'backend_unavailable'], 503);
+                return response()->json(['schema_version' => 2, 'status' => 'backend_unavailable'], 503);
             }
         }
         foreach ($users as $configured) {
@@ -26,6 +26,6 @@ class DeviceAccess
             }
         }
 
-        return response()->json(['schema_version' => 1, 'status' => 'access_denied'], 401);
+        return response()->json(['schema_version' => 2, 'status' => 'access_denied'], 401);
     }
 }
