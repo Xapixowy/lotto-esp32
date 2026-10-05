@@ -10,4 +10,5 @@
 /build/
 /.env
 /config/users.json
+/backend/config/users.json
 /.DS_Store

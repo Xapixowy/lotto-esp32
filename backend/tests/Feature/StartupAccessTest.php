@@ -7,6 +7,7 @@ use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Pool;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Symfony\Component\Process\Process;
 use Tests\TestCase;
@@ -19,11 +20,19 @@ class StartupAccessTest extends TestCase
 
     private string $url;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->directory = sys_get_temp_dir().'/lotto-startup-'.bin2hex(random_bytes(8));
+        mkdir($this->directory, 0700);
+    }
+
     protected function tearDown(): void
     {
         $this->server?->stop();
         if (isset($this->directory)) {
             @unlink($this->directory.'/config.php');
+            @unlink($this->directory.'/users.json');
             rmdir($this->directory);
         }
         parent::tearDown();
@@ -38,13 +47,12 @@ class StartupAccessTest extends TestCase
         Http::fake(['developers.lotto.pl/*' => Http::response($rows)]);
         $this->artisan('lotto:refresh')->assertExitCode(0);
 
-        $this->directory = sys_get_temp_dir().'/lotto-startup-'.bin2hex(random_bytes(8));
-        mkdir($this->directory, 0700);
         $owner = str_repeat('a', 32);
         $guest = str_repeat('b', 32);
         $newGuest = str_repeat('c', 32);
         $client = new Factory;
-        $this->startServer(['owner' => $owner, 'guest' => $guest]);
+        file_put_contents($this->directory.'/users.json', json_encode(['owner' => $owner, 'guest' => $guest], JSON_THROW_ON_ERROR));
+        $this->startServer();
 
         $responses = $client->pool(fn (Pool $pool) => [
             $pool->as('owner')->withToken($owner)->get($this->url.'/api/results'),
@@ -59,8 +67,11 @@ class StartupAccessTest extends TestCase
         $this->assertSame(401, $client->get($this->url.'/api/results')->status());
         $this->assertSame(401, $client->withToken($newGuest)->get($this->url.'/api/results')->status());
 
+        file_put_contents($this->directory.'/users.json', json_encode(['owner' => $owner, 'new-guest' => $newGuest], JSON_THROW_ON_ERROR));
+        $this->assertSame(200, $client->withToken($guest)->get($this->url.'/api/results')->status());
+        $this->assertSame(401, $client->withToken($newGuest)->get($this->url.'/api/results')->status());
         $this->server->stop();
-        $this->startServer(['owner' => $owner, 'new-guest' => $newGuest]);
+        $this->startServer();
         $ownerResponse = $client->withToken($owner)->get($this->url.'/api/results');
         $this->assertSame(200, $ownerResponse->status());
         $this->assertSame($first->json('results'), $ownerResponse->json('results'));
@@ -73,8 +84,32 @@ class StartupAccessTest extends TestCase
         Http::assertSentCount(1);
     }
 
-    /** @param array<string, string> $users */
-    private function startServer(array $users): void
+    /** @return array<string, array{string|null}> */
+    public static function invalidUserFiles(): array
+    {
+        return [
+            'missing' => [null],
+            'malformed' => ['{'],
+            'empty' => ['{}'],
+            'short token' => ['{"owner":"short"}'],
+        ];
+    }
+
+    #[DataProvider('invalidUserFiles')]
+    public function test_invalid_user_files_deny_access_without_exposing_configuration(?string $contents): void
+    {
+        if ($contents !== null) {
+            file_put_contents($this->directory.'/users.json', $contents);
+        }
+        $this->startServer();
+        $response = (new Factory)->withToken(str_repeat('a', 32))->get($this->url.'/api/results');
+        $this->assertSame(503, $response->status());
+        $this->assertSame('backend_unavailable', $response->json('status'));
+        $this->assertStringNotContainsString('short', $response->body());
+        $this->assertStringNotContainsString($this->directory, $response->body());
+    }
+
+    private function startServer(): void
     {
         $socket = stream_socket_server('tcp://127.0.0.1:0');
         if ($socket === false) {
@@ -91,7 +126,8 @@ class StartupAccessTest extends TestCase
             'APP_DEBUG' => 'false',
             'APP_KEY' => 'base64:'.base64_encode(str_repeat('k', 32)),
             'APP_CONFIG_CACHE' => $this->directory.'/config.php',
-            'API_USERS_JSON' => json_encode($users, JSON_THROW_ON_ERROR),
+            'API_USERS_FILE' => $this->directory.'/users.json',
+            'API_USERS_JSON' => false,
             'LOTTO_API_KEY' => '',
             'REDIS_HOST' => config('database.redis.cache.host'),
             'REDIS_PORT' => (string) config('database.redis.cache.port'),

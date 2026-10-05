@@ -28,7 +28,7 @@
         <env name="REDIS_DB" value="14"/>
         <env name="REDIS_CACHE_DB" value="15"/>
         <env name="REDIS_PREFIX" value="lotto-test:"/>
-        <env name="API_USERS_JSON" value='{"owner":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}'/>
+        <env name="API_USERS_FILE" value="/srv/tests/fixtures/users.json"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>

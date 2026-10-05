@@ -1,0 +1,219 @@
+[
+    {
+        "drawDate": "2026-10-03T20:00:00Z",
+        "gameType": "Lotto",
+        "results": [
+            {
+                "drawDate": "2026-10-03T20:00:00Z",
+                "gameType": "Lotto",
+                "resultsJson": [
+                    6,
+                    43,
+                    31,
+                    32,
+                    12,
+                    15
+                ],
+                "specialResults": []
+            },
+            {
+                "drawDate": "2026-10-03T20:00:00Z",
+                "gameType": "LottoPlus",
+                "resultsJson": [
+                    42,
+                    18,
+                    2,
+                    34,
+                    47,
+                    23
+                ],
+                "specialResults": []
+            }
+        ]
+    },
+    {
+        "drawDate": "2026-10-02T18:00:00Z",
+        "gameType": "EuroJackpot",
+        "results": [
+            {
+                "drawDate": "2026-10-02T18:00:00Z",
+                "gameType": "EuroJackpot",
+                "resultsJson": [
+                    6,
+                    4,
+                    17,
+                    7,
+                    45
+                ],
+                "specialResults": [
+                    7,
+                    12
+                ]
+            }
+        ]
+    },
+    {
+        "drawDate": "2026-10-05T12:00:00Z",
+        "gameType": "MultiMulti",
+        "results": [
+            {
+                "drawDate": "2026-10-05T12:00:00Z",
+                "gameType": "MultiMulti",
+                "resultsJson": [
+                    67,
+                    30,
+                    19,
+                    70,
+                    46,
+                    11,
+                    10,
+                    24,
+                    28,
+                    69,
+                    64,
+                    7,
+                    21,
+                    65,
+                    54,
+                    59,
+                    17,
+                    52,
+                    14,
+                    22
+                ],
+                "specialResults": [
+                    22
+                ]
+            }
+        ]
+    },
+    {
+        "drawDate": "2026-10-04T20:00:00Z",
+        "gameType": "EkstraPensja",
+        "results": [
+            {
+                "drawDate": "2026-10-04T20:00:00Z",
+                "gameType": "EkstraPensja",
+                "resultsJson": [
+                    19,
+                    24,
+                    11,
+                    3,
+                    2
+                ],
+                "specialResults": [
+                    3
+                ]
+            },
+            {
+                "drawDate": "2026-10-04T20:00:00Z",
+                "gameType": "EkstraPremia",
+                "resultsJson": [
+                    18,
+                    4,
+                    24,
+                    30,
+                    11
+                ],
+                "specialResults": [
+                    4
+                ]
+            }
+        ]
+    },
+    {
+        "drawDate": "2026-10-04T20:00:00Z",
+        "gameType": "MiniLotto",
+        "results": [
+            {
+                "drawDate": "2026-10-04T20:00:00Z",
+                "gameType": "MiniLotto",
+                "resultsJson": [
+                    29,
+                    15,
+                    34,
+                    2,
+                    8
+                ],
+                "specialResults": []
+            }
+        ]
+    },
+    {
+        "drawDate": "2026-10-05T12:00:00Z",
+        "gameType": "Kaskada",
+        "results": [
+            {
+                "drawDate": "2026-10-05T12:00:00Z",
+                "gameType": "Kaskada",
+                "resultsJson": [
+                    19,
+                    1,
+                    11,
+                    8,
+                    20,
+                    2,
+                    5,
+                    24,
+                    7,
+                    22,
+                    6,
+                    3
+                ],
+                "specialResults": []
+            }
+        ]
+    },
+    {
+        "drawDate": "2026-10-05T16:34:00Z",
+        "gameType": "Keno",
+        "results": [
+            {
+                "drawDate": "2026-10-05T16:34:00Z",
+                "gameType": "Keno",
+                "resultsJson": [
+                    40,
+                    18,
+                    10,
+                    54,
+                    51,
+                    38,
+                    66,
+                    30,
+                    42,
+                    58,
+                    56,
+                    31,
+                    57,
+                    16,
+                    49,
+                    36,
+                    3,
+                    55,
+                    27,
+                    70
+                ],
+                "specialResults": []
+            }
+        ]
+    },
+    {
+        "drawDate": "2026-10-05T16:32:00Z",
+        "gameType": "Szybkie600",
+        "results": [
+            {
+                "drawDate": "2026-10-05T16:32:00Z",
+                "gameType": "Szybkie600",
+                "resultsJson": [
+                    20,
+                    16,
+                    7,
+                    1,
+                    15,
+                    31
+                ],
+                "specialResults": []
+            }
+        ]
+    }
+]
