@@ -23,7 +23,7 @@ On the VPS, as an existing administrator:
 sudo adduser --disabled-password --gecos "" lotto-deploy
 sudo install -d -m 700 -o lotto-deploy -g lotto-deploy /home/lotto-deploy/.ssh
 sudo install -m 600 -o lotto-deploy -g lotto-deploy /tmp/lotto-deploy.pub /home/lotto-deploy/.ssh/authorized_keys
-sudo install -d -m 750 -o lotto-deploy -g lotto-deploy /srv/lotto-esp32
+sudo install -d -m 750 -o lotto-deploy -g lotto-deploy /home/lotto-deploy/lotto-esp32
 ```
 
 If Docker is not installed, install Docker Engine and the Compose plugin using the [official Ubuntu instructions](https://docs.docker.com/engine/install/ubuntu/). Do not replace an existing working Docker installation. Compose must be 2.24.4 or newer for the port override.
@@ -45,8 +45,8 @@ ssh -i ~/.ssh/lotto-deploy lotto-deploy@VPS_HOST
 As `lotto-deploy` on the VPS:
 
 ```sh
-git clone https://github.com/Xapixowy/lotto-esp32.git /srv/lotto-esp32
-cd /srv/lotto-esp32
+git clone https://github.com/Xapixowy/lotto-esp32.git /home/lotto-deploy/lotto-esp32
+cd /home/lotto-deploy/lotto-esp32
 ```
 
 If the repository is private, arrange read-only GitHub access for this account first; do not copy your personal private SSH key to the VPS.
@@ -54,14 +54,14 @@ If the repository is private, arrange read-only GitHub access for this account f
 Copy the existing private files from your computer over SSH. These examples preserve the same API tokens used by your devices:
 
 ```sh
-scp -i ~/.ssh/lotto-deploy .env lotto-deploy@VPS_HOST:/srv/lotto-esp32/.env
-scp -i ~/.ssh/lotto-deploy config/users.json lotto-deploy@VPS_HOST:/srv/lotto-esp32/config/users.json
+scp -i ~/.ssh/lotto-deploy .env lotto-deploy@VPS_HOST:/home/lotto-deploy/lotto-esp32/.env
+scp -i ~/.ssh/lotto-deploy config/users.json lotto-deploy@VPS_HOST:/home/lotto-deploy/lotto-esp32/config/users.json
 ```
 
 On the VPS, set `APP_URL=https://your-domain` and `LOTTO_DOMAIN=your-domain` in `.env`, retaining the generated `APP_KEY` and official key. Then:
 
 ```sh
-cd /srv/lotto-esp32
+cd /home/lotto-deploy/lotto-esp32
 chmod 600 .env config/users.json
 docker compose -f compose.yaml -f compose.nginx.yaml config --quiet
 docker compose -f compose.yaml -f compose.nginx.yaml up -d --build
@@ -76,18 +76,24 @@ docker compose -f compose.yaml -f compose.nginx.yaml up -d --force-recreate back
 
 ## Cloudflare-proxied Nginx virtual host
 
-For this VPS, Lotto uses Cloudflare proxying and Full (strict), matching the existing staging site's architecture. Create an Origin Certificate covering the Lotto domain in Cloudflare's **SSL/TLS → Origin Server → Create Certificate**, then save its PEM certificate and private key separately on the VPS as `/etc/ssl/cloudflare/lotto.pem` and `/etc/ssl/cloudflare/lotto.key`. Check these names do not already belong to another service. Use a certificate that covers Lotto; the staging certificate's filename alone does not establish its hostname coverage. Follow [Cloudflare's Origin CA instructions](https://developers.cloudflare.com/ssl/origin-configuration/origin-ca/).
+For this VPS, Lotto uses Cloudflare proxying and Full (strict), matching the existing staging site's architecture. The owner reports that the existing staging Origin Certificate covers `*.jakubchodzinski.pl`. The Lotto virtual host references the same `/etc/ssl/cloudflare/papai-staging.pem` and `/etc/ssl/cloudflare/papai-staging.key` files. Keep their existing names and permissions; renaming them would break staging's configured paths. Multiple virtual hosts can reference the same certificate/key pair.
 
-As an administrator, after installing the certificate files:
+First verify the existing certificate's hostname coverage and validity on the VPS. Replace `your-domain` with the actual Lotto hostname:
 
 ```sh
-sudo chown root:root /etc/ssl/cloudflare/lotto.pem /etc/ssl/cloudflare/lotto.key
-sudo chmod 644 /etc/ssl/cloudflare/lotto.pem
-sudo chmod 600 /etc/ssl/cloudflare/lotto.key
+sudo openssl x509 -in /etc/ssl/cloudflare/papai-staging.pem -noout -ext subjectAltName -dates
+sudo openssl x509 -in /etc/ssl/cloudflare/papai-staging.pem -noout -checkhost your-domain
+```
+
+The wildcard covers a single subdomain level, such as `lotto.jakubchodzinski.pl`; it does not alone cover the apex `jakubchodzinski.pl` or `api.lotto.jakubchodzinski.pl`. [Cloudflare's wildcard rules](https://developers.cloudflare.com/api/resources/origin_ca_certificates/) describe this scope. If the certificate is expired or does not cover Lotto, create a separate matching Origin Certificate using [Cloudflare's instructions](https://developers.cloudflare.com/ssl/origin-configuration/origin-ca/) and update only Lotto's certificate paths. Do not overwrite the shared staging certificate/key.
+
+After coverage and validity are confirmed, install Lotto's Nginx configuration as an administrator:
+
+```sh
 sudo install -d /etc/nginx/snippets
-sudo install -m 644 /srv/lotto-esp32/deploy/nginx/lotto-proxy.conf /etc/nginx/snippets/lotto-proxy.conf
-sudo install -m 644 /srv/lotto-esp32/deploy/nginx/lotto-cloudflare-real-ip.conf /etc/nginx/snippets/lotto-cloudflare-real-ip.conf
-sudo sed 's/lotto.example.com/your-domain/g' /srv/lotto-esp32/deploy/nginx/lotto-cloudflare.conf > /tmp/lotto-nginx.conf
+sudo install -m 644 /home/lotto-deploy/lotto-esp32/deploy/nginx/lotto-proxy.conf /etc/nginx/snippets/lotto-proxy.conf
+sudo install -m 644 /home/lotto-deploy/lotto-esp32/deploy/nginx/lotto-cloudflare-real-ip.conf /etc/nginx/snippets/lotto-cloudflare-real-ip.conf
+sudo sed 's/lotto.example.com/your-domain/g' /home/lotto-deploy/lotto-esp32/deploy/nginx/lotto-cloudflare.conf > /tmp/lotto-nginx.conf
 sudo install -m 644 /tmp/lotto-nginx.conf /etc/nginx/sites-available/lotto
 sudo ln -s /etc/nginx/sites-available/lotto /etc/nginx/sites-enabled/lotto
 sudo nginx -t
@@ -107,9 +113,9 @@ Ensure the domain's DNS points to the VPS. If there is an AAAA record, its IPv6 
 As an administrator, render the new site with your actual domain:
 
 ```sh
-sudo sed 's/lotto.example.com/your-domain/g' /srv/lotto-esp32/deploy/nginx/lotto.conf > /tmp/lotto-nginx.conf
+sudo sed 's/lotto.example.com/your-domain/g' /home/lotto-deploy/lotto-esp32/deploy/nginx/lotto.conf > /tmp/lotto-nginx.conf
 sudo install -d /etc/nginx/snippets
-sudo install -m 644 /srv/lotto-esp32/deploy/nginx/lotto-proxy.conf /etc/nginx/snippets/lotto-proxy.conf
+sudo install -m 644 /home/lotto-deploy/lotto-esp32/deploy/nginx/lotto-proxy.conf /etc/nginx/snippets/lotto-proxy.conf
 sudo install -m 644 /tmp/lotto-nginx.conf /etc/nginx/sites-available/lotto
 sudo ln -s /etc/nginx/sites-available/lotto /etc/nginx/sites-enabled/lotto
 sudo nginx -t
@@ -144,7 +150,7 @@ Set firmware `BACKEND_URL` to `https://your-domain/api/results` and provide the 
 For code updates, as `lotto-deploy`:
 
 ```sh
-cd /srv/lotto-esp32
+cd /home/lotto-deploy/lotto-esp32
 git pull --ff-only
 docker compose -f compose.yaml -f compose.nginx.yaml up -d --build
 ```
