@@ -5,6 +5,8 @@
 
 namespace lotto {
 
+constexpr int RESULTS_SCHEMA_VERSION = 2;
+
 inline Status responseStatus(const std::string& status) {
     if (status == "fetching") return Status::Fetching;
     if (status == "access_denied") return Status::AccessDenied;
@@ -15,7 +17,7 @@ inline Status responseStatus(const std::string& status) {
 }
 
 inline bool parseSnapshot(JsonVariantConst json, Snapshot& snapshot) {
-    if (!json["schema_version"].is<int>() || json["schema_version"].as<int>() != 2 ||
+    if (!json["schema_version"].is<int>() || json["schema_version"].as<int>() != RESULTS_SCHEMA_VERSION ||
         !json["status"].is<const char*>() || std::string(json["status"].as<const char*>()) != "ready" ||
         !json["lotto_fetched_at"].is<std::int64_t>() || !json["server_time"].is<std::int64_t>() ||
         !json["lotto_time"].is<const char*>() || !json["sync_time"].is<const char*>() ||
@@ -55,6 +57,14 @@ inline bool parseSnapshot(JsonVariantConst json, Snapshot& snapshot) {
         snapshot.slides.push_back(std::move(slide));
     }
     return true;
+}
+
+inline Status parseResultsResponse(int code, JsonVariantConst json, Snapshot& snapshot) {
+    if (!json["schema_version"].is<int>() || json["schema_version"].as<int>() != RESULTS_SCHEMA_VERSION) return Status::InvalidResponse;
+    const auto payloadStatus = json["status"].as<std::string>();
+    if (code == 200 && payloadStatus == "ready" && parseSnapshot(json, snapshot)) return Status::Ready;
+    if (code == 503 && payloadStatus != "ready") return responseStatus(payloadStatus);
+    return Status::InvalidResponse;
 }
 
 } // namespace lotto
