@@ -1,0 +1,96 @@
+name: Test and deploy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Build test environment
+        run: docker compose -f compose.test.yaml build tests firmware-build
+      - name: Backend tests, formatting and types
+        run: |
+          docker compose -f compose.test.yaml run --rm tests
+          docker compose -f compose.test.yaml run --rm tests vendor/bin/pint --test
+          docker compose -f compose.test.yaml run --rm tests composer typecheck
+      - name: Firmware tests and Arduino compilation
+        run: |
+          docker compose -f compose.test.yaml run --rm firmware-tests
+          docker compose -f compose.test.yaml run --rm firmware-build
+      - name: Validate deployment scripts and production HTTP access
+        run: |
+          bash -n deploy/activate-release.sh
+          shellcheck deploy/activate-release.sh tests/vps-smoke.sh tests/deployment-test.sh
+          docker run --rm -v "$PWD:/src:ro" -w /src debian:bookworm-slim bash tests/deployment-test.sh
+          bash tests/vps-smoke.sh
+      - name: Stop test containers
+        if: always()
+        run: docker compose -f compose.test.yaml down
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    concurrency:
+      group: lotto-production
+      cancel-in-progress: false
+    env:
+      VPS_HOST: ${{ vars.VPS_HOST }}
+      VPS_PORT: ${{ vars.VPS_PORT || '22' }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Skip a superseded commit
+        id: current
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          if [[ "$latest" == "$GITHUB_SHA" ]]; then
+            echo 'deploy=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'A newer main commit exists; skipping this deployment.'
+          fi
+      - name: Build an immutable production release
+        if: steps.current.outputs.deploy == 'true'
+        run: |
+          docker build --target production -f docker/Dockerfile -t "lotto-display-backend:$GITHUB_SHA" .
+          mkdir -p release
+          docker save "lotto-display-backend:$GITHUB_SHA" | gzip > release/backend-image.tar.gz
+          cp compose.yaml compose.nginx.yaml deploy/activate-release.sh release/
+          printf 'BACKEND_IMAGE=lotto-display-backend:%s\n' "$GITHUB_SHA" > release/release.env
+      - name: Configure SSH
+        if: steps.current.outputs.deploy == 'true'
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS }}
+        run: |
+          test -n "$VPS_HOST"
+          test -n "$SSH_PRIVATE_KEY"
+          test -n "$SSH_KNOWN_HOSTS"
+          [[ "$VPS_HOST" =~ ^[a-zA-Z0-9.-]+$ ]]
+          [[ "$VPS_PORT" =~ ^[0-9]+$ ]]
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/lotto-ci
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/lotto-ci ~/.ssh/known_hosts
+      - name: Transfer and activate
+        if: steps.current.outputs.deploy == 'true'
+        run: |
+          destination="/home/lotto-deploy/lotto-esp32/releases/$GITHUB_SHA"
+          ssh -i ~/.ssh/lotto-ci -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            "lotto-deploy@$VPS_HOST" "mkdir -p '$destination'"
+          scp -i ~/.ssh/lotto-ci -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            release/* "lotto-deploy@$VPS_HOST:$destination/"
+          ssh -i ~/.ssh/lotto-ci -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            "lotto-deploy@$VPS_HOST" "bash '$destination/activate-release.sh' '$destination'"
