@@ -90,49 +90,17 @@ The wildcard covers a single subdomain level, such as `lotto.jakubchodzinski.pl`
 After coverage and validity are confirmed, install Lotto's Nginx configuration as an administrator:
 
 ```sh
-sudo install -d /etc/nginx/snippets
-sudo install -m 644 /home/lotto-deploy/lotto-esp32/deploy/nginx/lotto-proxy.conf /etc/nginx/snippets/lotto-proxy.conf
-sudo install -m 644 /home/lotto-deploy/lotto-esp32/deploy/nginx/lotto-cloudflare-real-ip.conf /etc/nginx/snippets/lotto-cloudflare-real-ip.conf
-sudo sed 's/lotto.example.com/your-domain/g' /home/lotto-deploy/lotto-esp32/deploy/nginx/lotto-cloudflare.conf > /tmp/lotto-nginx.conf
-sudo install -m 644 /tmp/lotto-nginx.conf /etc/nginx/sites-available/lotto
+sudo install -m 644 /home/lotto-deploy/lotto-esp32/deploy/nginx/lotto.conf /etc/nginx/sites-available/lotto
 sudo ln -s /etc/nginx/sites-available/lotto /etc/nginx/sites-enabled/lotto
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-Keep existing sites enabled. Check the new site/snippet filenames before installation. Point the Lotto DNS record to the VPS and enable proxying; ensure any AAAA record also points to this server. Set the application's SSL mode to **Full (strict)**. The real-IP snippet trusts only [Cloudflare's published ranges](https://www.cloudflare.com/ips/); recheck the official IPv4/IPv6 lists during deployment and install updated ranges before testing/reloading Nginx if they changed.
+Keep existing sites enabled. Check the new site filenames before installation. Point the Lotto DNS record to the VPS and enable proxying; ensure any AAAA record also points to this server. Set the application's SSL mode to **Full (strict)**. The virtual host trusts only [Cloudflare's published ranges](https://www.cloudflare.com/ips/); recheck the official IPv4/IPv6 lists during deployment and install updated ranges before testing/reloading Nginx if they changed.
 
-In Cloudflare, configure [Cache Rules](https://developers.cloudflare.com/cache/how-to/cache-rules/settings/) to bypass caching for the Lotto hostname and `/api/results`. The Nginx snippet also sends `Cache-Control: no-store`. Results must remain current and authentication must reach Laravel.
+In Cloudflare, configure [Cache Rules](https://developers.cloudflare.com/cache/how-to/cache-rules/settings/) to bypass caching for the Lotto hostname and `/api/results`. The virtual host also sends `Cache-Control: no-store`. Results must remain current and authentication must reach Laravel.
 
 With proxying enabled, the ESP32 sees Cloudflare's public **edge** certificate. Firmware `BACKEND_ROOT_CA` must validate that public chain, rather than the Origin CA certificate used between Cloudflare and Nginx. Inspect the public hostname's actual chain before choosing the root CA. [Cloudflare explains the two certificate connections](https://developers.cloudflare.com/ssl/concepts/). Track the Origin Certificate's expiry and replace it before expiration; this path does not use Certbot.
-
-## Alternative: direct VPS HTTPS with Certbot
-
-Ensure the domain's DNS points to the VPS. If there is an AAAA record, its IPv6 address must also reach this VPS. Public HTTP/HTTPS ports must be permitted by the existing server and provider firewalls; do not replace the server's firewall rules or SSH configuration.
-
-As an administrator, render the new site with your actual domain:
-
-```sh
-sudo sed 's/lotto.example.com/your-domain/g' /home/lotto-deploy/lotto-esp32/deploy/nginx/lotto.conf > /tmp/lotto-nginx.conf
-sudo install -d /etc/nginx/snippets
-sudo install -m 644 /home/lotto-deploy/lotto-esp32/deploy/nginx/lotto-proxy.conf /etc/nginx/snippets/lotto-proxy.conf
-sudo install -m 644 /tmp/lotto-nginx.conf /etc/nginx/sites-available/lotto
-sudo ln -s /etc/nginx/sites-available/lotto /etc/nginx/sites-enabled/lotto
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-Check those filenames and domain do not already belong to another site before installing. `nginx -t` must succeed before reloading. The proxy explicitly forwards bearer authentication and uses Nginx's [documented proxy directives](https://nginx.org/en/docs/http/ngx_http_proxy_module.html).
-
-If Certbot is not already installed, follow the [Ubuntu certificate setup instructions](https://ubuntu.com/server/docs/how-to/security/obtain-tls-certificates/). With the HTTP site reachable, request a certificate for this domain:
-
-```sh
-sudo certbot --nginx -d your-domain --redirect
-sudo nginx -t
-sudo certbot renew --dry-run
-```
-
-Certbot modifies the matching site to enable HTTPS and redirect HTTP. Preserve its managed certificate settings rather than overwriting the virtual host with the initial HTTP template afterward. Confirm the installation's certificate-renewal timer is enabled.
 
 ## Verification and updates
 
@@ -155,6 +123,6 @@ git pull --ff-only
 docker compose -f compose.yaml -f compose.nginx.yaml up -d --build
 ```
 
-During configuration updates, reinstall the relevant Lotto proxy/real-IP snippets, validate with `sudo nginx -t`, then reload Nginx. Preserve any Certbot-managed site settings when using the direct-VPS alternative.
+All Lotto Nginx settings are in `deploy/nginx/lotto.conf`, including HTTP redirect, TLS, trusted Cloudflare ranges and API proxying. It uses `lotto.jakubchodzinski.pl`; keep both `server_name` entries consistent with `LOTTO_DOMAIN`. During configuration updates, reinstall this single virtual-host file, validate with `sudo nginx -t`, then reload Nginx. No Lotto snippet files are required.
 
 These files have not provisioned the VPS or verified its existing configuration, public certificate, or device connection. Those checks require access to the actual server and board.
