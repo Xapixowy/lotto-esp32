@@ -20,7 +20,7 @@ A labeled collection of winning values within a game's slide, usually representi
 One screenful of a slide's content when its result groups cannot fit together.
 
 **Screen lock**:
-A temporary hold that stops automatic slide changes while allowing manual navigation.
+A temporary hold that stops automatic page changes while allowing manual navigation.
 _Avoid_: Authentication lock
 
 **Lotto time**:

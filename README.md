@@ -100,8 +100,8 @@ Language is Polish. Rebuild and upload after changing credentials. Firmware uses
 
 - Order and content come from the backend: Lotto, Mini Lotto, Multi Multi, Ekstra Pensja, Keno, Szybkie 600, Eurojackpot, Kaskada by default.
 - Each slide has labeled groups. One group fits on one screen: up to 20 numbers in a five-column, four-row grid using the large number font. Groups are never split or scrolled. Each group stays for 10 seconds before the next group/game; oversized groups show a data error rather than truncated results.
-- Arrows wrap between games. The bottom-right lock holds a game for five minutes while its pages continue rotating. Arrows do not extend the lock. Tap the lock again to unlock immediately.
-- The top progress line shrinks until the next game, counting all remaining pages. It resets on manual navigation and stays gray while locked. Arrow and lock taps briefly invert the button colors for 150 ms.
+- Arrows move between group pages, continuing into adjacent games and wrapping at the ends. The bottom-right lock holds the exact page for five minutes. Arrows still work while locked and do not extend the lock. Tap the lock again to unlock immediately.
+- The top progress line shrinks until the next page. It resets on manual navigation or unlocking and stays gray while locked. Arrow and lock taps briefly invert the button colors for 150 ms.
 - `Lotto` and `Sync` appear at bottom-left in Warsaw time. They mean the last successful upstream fetch and last successful device retrieval, respectively, rather than draw times.
 - Normal polls retain results and show `Odświeżanie...` at upper-left. Errors replace the entire screen and hide controls. Recovery preserves the selected game and any unexpired lock.
 - Wi-Fi failure, unreachable API, denied access, unavailable backend, failed Lotto refresh, invalid responses and stale data are distinct statuses. Results are stale after more than eight minutes without a successful official fetch.

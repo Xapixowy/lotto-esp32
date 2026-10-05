@@ -57,7 +57,7 @@ public:
         if (drawn_ && sameContent(view, previous_)) {
             if (view.refreshing != previous_.refreshing) drawRefreshing(view.refreshing);
             if (view.status == lotto::Status::Ready) {
-                if (view.gameRemainingPermille != previous_.gameRemainingPermille) drawCountdown(view);
+                if (view.pageRemainingPermille != previous_.pageRemainingPermille) drawCountdown(view);
                 if (view.touchFeedback != previous_.touchFeedback || view.touchedControl != previous_.touchedControl) drawControls(view);
             }
             previous_ = view;
@@ -127,7 +127,7 @@ private:
     }
 
     void drawCountdown(const lotto::View& view) {
-        const int width = view.locked ? 320 : 320 * view.gameRemainingPermille / 1000;
+        const int width = view.locked ? 320 : 320 * view.pageRemainingPermille / 1000;
         lcd_.fillRect(0, 0, 320, 5, BUTTON);
         if (width > 0) lcd_.fillRect(0, 0, width, 5, view.locked ? SECONDARY : ACCENT);
     }

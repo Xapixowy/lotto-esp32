@@ -44,7 +44,7 @@ struct View {
     std::size_t pages = 0;
     bool locked = false;
     bool refreshing = false;
-    std::uint16_t gameRemainingPermille = 1000;
+    std::uint16_t pageRemainingPermille = 1000;
     bool touchFeedback = false;
     Touch touchedControl = Touch::Previous;
 };
@@ -115,12 +115,9 @@ public:
             fail(Status::Stale, now);
             return;
         }
-        if (now - pageStartedAt_ >= 10000) {
+        if (!locked_ && now - pageStartedAt_ >= PAGE_DURATION_MS) {
             pageStartedAt_ = now;
-            if (++page_ >= pageCount(snapshot_.slides[slide_])) {
-                page_ = 0;
-                if (!locked_) slide_ = (slide_ + 1) % snapshot_.slides.size();
-            }
+            movePage(true);
         }
     }
 
@@ -135,8 +132,7 @@ public:
             if (locked_) lockedAt_ = now;
             else pageStartedAt_ = now;
         } else {
-            slide_ = (slide_ + (action == Touch::Next ? 1 : snapshot_.slides.size() - 1)) % snapshot_.slides.size();
-            page_ = 0;
+            movePage(action == Touch::Next);
             pageStartedAt_ = now;
         }
     }
@@ -155,9 +151,8 @@ public:
         result.pages = pageCount(slide);
         result.locked = locked_;
         if (!locked_) {
-            const auto elapsed = std::min<std::uint64_t>(now - pageStartedAt_, 10000);
-            const auto remaining = (result.pages - page_) * 10000 - elapsed;
-            result.gameRemainingPermille = static_cast<std::uint16_t>(remaining * 1000 / (result.pages * 10000));
+            const auto elapsed = std::min<std::uint64_t>(now - pageStartedAt_, PAGE_DURATION_MS);
+            result.pageRemainingPermille = static_cast<std::uint16_t>((PAGE_DURATION_MS - elapsed) * 1000 / PAGE_DURATION_MS);
         }
         result.touchFeedback = hasTouched_ && now - touchedAt_ < 150;
         result.touchedControl = touchedControl_;
@@ -168,6 +163,22 @@ public:
     }
 
 private:
+    static constexpr std::uint64_t PAGE_DURATION_MS = 10000;
+
+    void movePage(bool forward) {
+        if (forward) {
+            if (++page_ >= pageCount(snapshot_.slides[slide_])) {
+                slide_ = (slide_ + 1) % snapshot_.slides.size();
+                page_ = 0;
+            }
+        } else if (page_ > 0) {
+            --page_;
+        } else {
+            slide_ = (slide_ + snapshot_.slides.size() - 1) % snapshot_.slides.size();
+            page_ = pageCount(snapshot_.slides[slide_]) - 1;
+        }
+    }
+
     static std::size_t pageCount(const Slide& slide) {
         return slide.groups.size();
     }
