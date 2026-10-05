@@ -56,12 +56,17 @@ public:
     void draw(const lotto::View& view) {
         if (drawn_ && sameContent(view, previous_)) {
             if (view.refreshing != previous_.refreshing) drawRefreshing(view.refreshing);
+            if (view.status == lotto::Status::Ready) {
+                if (view.pageRemainingPermille != previous_.pageRemainingPermille) drawCountdown(view);
+                if (view.touchFeedback != previous_.touchFeedback || view.touchedControl != previous_.touchedControl) drawControls(view);
+            }
             previous_ = view;
             return;
         }
         lcd_.fillScreen(BACKGROUND);
         if (view.status != lotto::Status::Ready) drawError(view.status);
         else {
+            drawCountdown(view);
             drawRefreshing(view.refreshing);
             print(10, 45, view.title.c_str(), u8g2_font_helvB18_te, FOREGROUND);
             print(275, 43, (std::to_string(view.page + 1) + "/" + std::to_string(view.pages)).c_str());
@@ -70,14 +75,14 @@ public:
                 auto value = std::to_string(view.values[i]);
                 text_.setFont(u8g2_font_helvB24_tn);
                 auto width = text_.getUTF8Width(value.c_str());
-                print(10 + static_cast<int>(i % 4) * 76 + (70 - width) / 2,
-                      107 + static_cast<int>(i / 4) * 36, value.c_str(), u8g2_font_helvB24_tn,
-                      view.kind == "additional" ? ACCENT : FOREGROUND);
+                print(10 + static_cast<int>(i % 5) * 60 + (56 - width) / 2,
+                      101 + static_cast<int>(i / 5) * 27, value.c_str(), u8g2_font_helvB24_tn,
+                      ((i < view.special.size() && view.special[i]) || (view.special.empty() && view.kind == "additional")) ? ACCENT : FOREGROUND);
             }
             lcd_.drawFastHLine(8, 190, 304, SECONDARY);
             print(8, 209, ("Lotto: " + view.lottoTime).c_str());
             print(8, 231, ("Sync:  " + view.syncTime).c_str());
-            drawControls(view.locked);
+            drawControls(view);
         }
         previous_ = view;
         drawn_ = true;
@@ -104,7 +109,7 @@ private:
 
     static bool sameContent(const lotto::View& a, const lotto::View& b) {
         return a.status == b.status && a.title == b.title && a.groupLabel == b.groupLabel &&
-            a.kind == b.kind && a.values == b.values && a.lottoTime == b.lottoTime &&
+            a.kind == b.kind && a.values == b.values && a.special == b.special && a.lottoTime == b.lottoTime &&
             a.syncTime == b.syncTime && a.page == b.page && a.pages == b.pages && a.locked == b.locked;
     }
 
@@ -117,21 +122,32 @@ private:
     }
 
     void drawRefreshing(bool refreshing) {
-        lcd_.fillRect(0, 0, 320, 21, BACKGROUND);
-        if (refreshing) print(10, 16, "Odświeżanie...", u8g2_font_unifont_t_polish, SECONDARY);
+        lcd_.fillRect(0, 6, 320, 18, BACKGROUND);
+        if (refreshing) print(10, 21, "Odświeżanie...", u8g2_font_unifont_t_polish, SECONDARY);
     }
 
-    void drawControls(bool locked) {
-        lcd_.fillRoundRect(160, 192, 48, 48, 5, BUTTON);
-        lcd_.fillRoundRect(212, 192, 48, 48, 5, BUTTON);
-        lcd_.fillRoundRect(264, 192, 56, 48, 5, locked ? ACCENT : BUTTON);
-        lcd_.fillTriangle(173, 216, 189, 204, 189, 228, FOREGROUND);
-        lcd_.fillTriangle(247, 216, 231, 204, 231, 228, FOREGROUND);
-        auto ink = locked ? BACKGROUND : FOREGROUND;
+    void drawCountdown(const lotto::View& view) {
+        const int width = view.locked ? 320 : 320 * view.pageRemainingPermille / 1000;
+        lcd_.fillRect(0, 0, 320, 5, BUTTON);
+        if (width > 0) lcd_.fillRect(0, 0, width, 5, view.locked ? SECONDARY : ACCENT);
+    }
+
+    void drawControls(const lotto::View& view) {
+        const bool previousPressed = view.touchFeedback && view.touchedControl == lotto::Touch::Previous;
+        const bool nextPressed = view.touchFeedback && view.touchedControl == lotto::Touch::Next;
+        const bool lockPressed = view.touchFeedback && view.touchedControl == lotto::Touch::Lock;
+        lcd_.fillRoundRect(160, 192, 48, 48, 5, previousPressed ? FOREGROUND : BUTTON);
+        lcd_.fillRoundRect(212, 192, 48, 48, 5, nextPressed ? FOREGROUND : BUTTON);
+        lcd_.fillTriangle(173, 216, 189, 204, 189, 228, previousPressed ? BUTTON : FOREGROUND);
+        lcd_.fillTriangle(247, 216, 231, 204, 231, 228, nextPressed ? BUTTON : FOREGROUND);
+        auto fill = view.locked ? ACCENT : BUTTON;
+        auto ink = view.locked ? BACKGROUND : FOREGROUND;
+        if (lockPressed) std::swap(fill, ink);
+        lcd_.fillRoundRect(264, 192, 56, 48, 5, fill);
         lcd_.fillRoundRect(282, 213, 20, 17, 2, ink);
         lcd_.drawRoundRect(285, 200, 14, 20, 6, ink);
         lcd_.drawRoundRect(286, 201, 12, 19, 5, ink);
-        if (!locked) lcd_.fillRect(284, 207, 5, 7, BUTTON);
+        if (!view.locked) lcd_.fillRect(284, 207, 5, 7, fill);
     }
 
     void drawError(lotto::Status status) {

@@ -1,6 +1,6 @@
 # Lotto Display
 
-Polish lottery results on an ESP32 Cheap Yellow Display, backed by a Dockerized Laravel API and ephemeral Redis. No database. The backend replaces one shared snapshot every four minutes; devices read it every 15 seconds. Dark-mode results use large numbers and paginated groups.
+Polish lottery results on an ESP32 Cheap Yellow Display, backed by a Dockerized Laravel API and ephemeral Redis. No database. The backend replaces one shared snapshot every four minutes; devices read it every 15 seconds. Dark-mode results use large numbers and show one complete result group at a time.
 
 ## Run the backend with Docker
 
@@ -99,8 +99,9 @@ Language is Polish. Rebuild and upload after changing credentials. Firmware uses
 ## Display behavior
 
 - Order and content come from the backend: Lotto, Mini Lotto, Multi Multi, Ekstra Pensja, Keno, Szybkie 600, Eurojackpot, Kaskada by default.
-- Each slide has labeled groups. One page holds up to 12 numbers; long groups get additional pages. Each page stays for 10 seconds before the next page/game.
-- Arrows wrap between games. The bottom-right lock holds a game for five minutes while its pages continue rotating. Arrows do not extend the lock. Tap the lock again to unlock immediately.
+- Each slide has labeled groups. One group fits on one screen: up to 20 numbers in a five-column, four-row grid using the large number font. Groups are never split or scrolled. Each group stays for 10 seconds before the next group/game; oversized groups show a data error rather than truncated results.
+- Arrows move between group pages, continuing into adjacent games and wrapping at the ends. The bottom-right lock holds the exact page for five minutes. Arrows still work while locked and do not extend the lock. Tap the lock again to unlock immediately.
+- The top progress line shrinks until the next page. It resets on manual navigation or unlocking and stays gray while locked. Arrow and lock taps briefly invert the button colors for 150 ms.
 - `Lotto` and `Sync` appear at bottom-left in Warsaw time. They mean the last successful upstream fetch and last successful device retrieval, respectively, rather than draw times.
 - Normal polls retain results and show `Odświeżanie...` at upper-left. Errors replace the entire screen and hide controls. Recovery preserves the selected game and any unexpired lock.
 - Wi-Fi failure, unreachable API, denied access, unavailable backend, failed Lotto refresh, invalid responses and stale data are distinct statuses. Results are stale after more than eight minutes without a successful official fetch.
@@ -109,11 +110,11 @@ Language is Polish. Rebuild and upload after changing credentials. Firmware uses
 
 `GET /api/results` returns `schema_version`, `status`, `lotto_fetched_at` (Unix seconds or null), `server_time` (Unix seconds), Warsaw `lotto_time`/`sync_time` strings, and `results`.
 
-Each result has a stable `id`, `label`, and ordered `groups`. Each group has `label`, `kind` (`simple` or `additional`), and an integer `value` array. Backend snapshots replace previous results; neither component accumulates historical draws. The official all-games response determines how many groups are available.
+Each result has a stable `id`, `label`, and ordered `groups`. Each draw group has `label`, `kind: "simple"`, a numerically ascending integer `value` array, and an aligned `numbers` array of `{value, type}` objects. Types are `simple` and `special`; firmware shows special numbers in yellow on the same page. Multi Multi Plus marks an existing winning number, while separate special pools (Eurojackpot and Ekstra Pensja) retain both entries if values overlap. There is no separate “Dodatkowe” page. The additive `numbers` field preserves schema-version-1 compatibility; firmware also accepts older snapshots without it. Backend snapshots replace previous results; neither component accumulates historical draws. The official all-games response determines how many groups are available.
 
 Ready responses use HTTP 200. `fetching`, `lotto_refresh_failed`, `stale`, and `backend_unavailable` use HTTP 503, with no displayed results. Invalid credentials use HTTP 401 and `access_denied`. Errors never expose upstream exceptions or tokens. Firmware rejects unsupported schema versions, duplicate game IDs, invalid values and unsupported group kinds.
 
-The backend validates all eight required games before atomic replacement, preserves the previous successful snapshot internally after failure, and retries on the four-minute schedule. Requests never initiate official Lotto calls. Payloads are bounded for ESP32 memory; groups support at most 100 values and 16 groups per game, with a 24 KB encoded result budget.
+The backend validates all eight required games before atomic replacement, preserves the previous successful snapshot internally after failure, and retries on the four-minute schedule. Requests never initiate official Lotto calls. Backend payloads support at most 100 values and 16 groups per game, with a 24 KB encoded result budget. Firmware accepts up to 20 values per group so each complete group fits on one screen.
 
 ## Tests and type checks, entirely in Docker
 
@@ -124,7 +125,7 @@ docker compose -f compose.test.yaml run --rm tests composer typecheck
 docker compose -f compose.test.yaml run --rm firmware-tests
 ```
 
-Backend feature tests use isolated real Redis and fake external Lotto responses. They verify snapshot replacement, access, scheduling/nonoverlap, errors and recovery. The startup-access integration test runs the actual configuration-caching entrypoint and a local HTTP server, checks two clients against the shared snapshot, edits the private JSON file, and verifies permissions change only after restart without replacing the snapshot. Its configuration cache and user file are isolated and removed afterward. Native C++ tests exercise display-controller timing and touch behavior. Most fixtures are synthetic; `lotto-upstream.authenticated.json` contains only public draw fields from one authenticated official response on 5 October 2026. Its regression checks selected games, excludes Plus/Premia, and verifies additional groups and Warsaw draw times without live requests during tests.
+Backend feature tests use isolated real Redis and fake external Lotto responses. They verify snapshot replacement, access, scheduling/nonoverlap, errors and recovery. The startup-access integration test runs the actual configuration-caching entrypoint and a local HTTP server, checks two clients against the shared snapshot, edits the private JSON file, and verifies permissions change only after restart without replacing the snapshot. Its configuration cache and user file are isolated and removed afterward. Native C++ tests exercise display-controller timing and touch behavior. Most fixtures are synthetic; `lotto-upstream.authenticated.json` contains only public draw fields from one authenticated official response on 5 October 2026. Its regression checks selected games, excludes Plus/Premia, and verifies sorted numbers, special pools, Multi Multi Plus and Warsaw draw times without live requests during tests.
 
 Optional Docker compile check without touching the connected ESP32:
 

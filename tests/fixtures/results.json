@@ -20,6 +20,32 @@
             24,
             36,
             41
+          ],
+          "numbers": [
+            {
+              "value": 1,
+              "type": "simple"
+            },
+            {
+              "value": 4,
+              "type": "simple"
+            },
+            {
+              "value": 12,
+              "type": "simple"
+            },
+            {
+              "value": 24,
+              "type": "simple"
+            },
+            {
+              "value": 36,
+              "type": "simple"
+            },
+            {
+              "value": 41,
+              "type": "simple"
+            }
           ]
         }
       ]
@@ -37,6 +63,28 @@
             15,
             24,
             40
+          ],
+          "numbers": [
+            {
+              "value": 2,
+              "type": "simple"
+            },
+            {
+              "value": 8,
+              "type": "simple"
+            },
+            {
+              "value": 15,
+              "type": "simple"
+            },
+            {
+              "value": 24,
+              "type": "simple"
+            },
+            {
+              "value": 40,
+              "type": "simple"
+            }
           ]
         }
       ]
@@ -69,6 +117,88 @@
             18,
             19,
             20
+          ],
+          "numbers": [
+            {
+              "value": 1,
+              "type": "simple"
+            },
+            {
+              "value": 2,
+              "type": "simple"
+            },
+            {
+              "value": 3,
+              "type": "simple"
+            },
+            {
+              "value": 4,
+              "type": "simple"
+            },
+            {
+              "value": 5,
+              "type": "simple"
+            },
+            {
+              "value": 6,
+              "type": "simple"
+            },
+            {
+              "value": 7,
+              "type": "simple"
+            },
+            {
+              "value": 8,
+              "type": "simple"
+            },
+            {
+              "value": 9,
+              "type": "simple"
+            },
+            {
+              "value": 10,
+              "type": "simple"
+            },
+            {
+              "value": 11,
+              "type": "simple"
+            },
+            {
+              "value": 12,
+              "type": "simple"
+            },
+            {
+              "value": 13,
+              "type": "simple"
+            },
+            {
+              "value": 14,
+              "type": "simple"
+            },
+            {
+              "value": 15,
+              "type": "simple"
+            },
+            {
+              "value": 16,
+              "type": "simple"
+            },
+            {
+              "value": 17,
+              "type": "simple"
+            },
+            {
+              "value": 18,
+              "type": "simple"
+            },
+            {
+              "value": 19,
+              "type": "simple"
+            },
+            {
+              "value": 20,
+              "type": "simple"
+            }
           ]
         }
       ]
@@ -82,17 +212,37 @@
           "kind": "simple",
           "value": [
             1,
+            2,
             7,
             13,
             22,
             33
-          ]
-        },
-        {
-          "label": "05.10.2026 14:00 · Dodatkowe",
-          "kind": "additional",
-          "value": [
-            2
+          ],
+          "numbers": [
+            {
+              "value": 1,
+              "type": "simple"
+            },
+            {
+              "value": 2,
+              "type": "special"
+            },
+            {
+              "value": 7,
+              "type": "simple"
+            },
+            {
+              "value": 13,
+              "type": "simple"
+            },
+            {
+              "value": 22,
+              "type": "simple"
+            },
+            {
+              "value": 33,
+              "type": "simple"
+            }
           ]
         }
       ]
@@ -125,6 +275,88 @@
             38,
             39,
             40
+          ],
+          "numbers": [
+            {
+              "value": 21,
+              "type": "simple"
+            },
+            {
+              "value": 22,
+              "type": "simple"
+            },
+            {
+              "value": 23,
+              "type": "simple"
+            },
+            {
+              "value": 24,
+              "type": "simple"
+            },
+            {
+              "value": 25,
+              "type": "simple"
+            },
+            {
+              "value": 26,
+              "type": "simple"
+            },
+            {
+              "value": 27,
+              "type": "simple"
+            },
+            {
+              "value": 28,
+              "type": "simple"
+            },
+            {
+              "value": 29,
+              "type": "simple"
+            },
+            {
+              "value": 30,
+              "type": "simple"
+            },
+            {
+              "value": 31,
+              "type": "simple"
+            },
+            {
+              "value": 32,
+              "type": "simple"
+            },
+            {
+              "value": 33,
+              "type": "simple"
+            },
+            {
+              "value": 34,
+              "type": "simple"
+            },
+            {
+              "value": 35,
+              "type": "simple"
+            },
+            {
+              "value": 36,
+              "type": "simple"
+            },
+            {
+              "value": 37,
+              "type": "simple"
+            },
+            {
+              "value": 38,
+              "type": "simple"
+            },
+            {
+              "value": 39,
+              "type": "simple"
+            },
+            {
+              "value": 40,
+              "type": "simple"
+            }
           ]
         }
       ]
@@ -143,6 +375,32 @@
             20,
             24,
             30
+          ],
+          "numbers": [
+            {
+              "value": 1,
+              "type": "simple"
+            },
+            {
+              "value": 7,
+              "type": "simple"
+            },
+            {
+              "value": 12,
+              "type": "simple"
+            },
+            {
+              "value": 20,
+              "type": "simple"
+            },
+            {
+              "value": 24,
+              "type": "simple"
+            },
+            {
+              "value": 30,
+              "type": "simple"
+            }
           ]
         }
       ]
@@ -155,19 +413,43 @@
           "label": "05.10.2026 14:00",
           "kind": "simple",
           "value": [
+            3,
             5,
+            9,
             12,
             23,
             34,
             45
-          ]
-        },
-        {
-          "label": "05.10.2026 14:00 · Dodatkowe",
-          "kind": "additional",
-          "value": [
-            3,
-            9
+          ],
+          "numbers": [
+            {
+              "value": 3,
+              "type": "special"
+            },
+            {
+              "value": 5,
+              "type": "simple"
+            },
+            {
+              "value": 9,
+              "type": "special"
+            },
+            {
+              "value": 12,
+              "type": "simple"
+            },
+            {
+              "value": 23,
+              "type": "simple"
+            },
+            {
+              "value": 34,
+              "type": "simple"
+            },
+            {
+              "value": 45,
+              "type": "simple"
+            }
           ]
         }
       ]
@@ -192,6 +474,56 @@
             10,
             11,
             12
+          ],
+          "numbers": [
+            {
+              "value": 1,
+              "type": "simple"
+            },
+            {
+              "value": 2,
+              "type": "simple"
+            },
+            {
+              "value": 3,
+              "type": "simple"
+            },
+            {
+              "value": 4,
+              "type": "simple"
+            },
+            {
+              "value": 5,
+              "type": "simple"
+            },
+            {
+              "value": 6,
+              "type": "simple"
+            },
+            {
+              "value": 7,
+              "type": "simple"
+            },
+            {
+              "value": 8,
+              "type": "simple"
+            },
+            {
+              "value": 9,
+              "type": "simple"
+            },
+            {
+              "value": 10,
+              "type": "simple"
+            },
+            {
+              "value": 11,
+              "type": "simple"
+            },
+            {
+              "value": 12,
+              "type": "simple"
+            }
           ]
         }
       ]

@@ -39,10 +39,23 @@ inline bool parseSnapshot(JsonVariantConst json, Snapshot& snapshot) {
             Group group{itemGroup["label"].as<std::string>(), itemGroup["kind"].as<std::string>(), {}};
             if (group.label.empty() || group.label.size() > 128 || (group.kind != "simple" && group.kind != "additional")) return false;
             auto values = itemGroup["value"].as<JsonArrayConst>();
-            if (values.size() == 0 || values.size() > 100) return false;
+            if (values.size() == 0 || values.size() > MAX_GROUP_VALUES) return false;
             for (JsonVariantConst value : values) {
                 if (!value.is<int>() || value.as<int>() < 0 || value.as<int>() > 999) return false;
                 group.values.push_back(value.as<int>());
+            }
+            if (!itemGroup["numbers"].isNull()) {
+                if (!itemGroup["numbers"].is<JsonArrayConst>()) return false;
+                auto numbers = itemGroup["numbers"].as<JsonArrayConst>();
+                if (numbers.size() != group.values.size()) return false;
+                std::size_t index = 0;
+                for (JsonVariantConst number : numbers) {
+                    if (!number["value"].is<int>() || number["value"].as<int>() != group.values[index++] ||
+                        !number["type"].is<const char*>()) return false;
+                    const std::string type = number["type"].as<std::string>();
+                    if (type != "simple" && type != "special") return false;
+                    group.special.push_back(type == "special");
+                }
             }
             slide.groups.push_back(std::move(group));
         }

@@ -73,18 +73,17 @@ class Results
                 if (! is_array($values) || ! array_is_list($values) || $values === [] || count($values) > 100 || array_any($values, fn ($value) => ! is_int($value) || $value < 0 || $value > 999)) {
                     throw new InvalidArgumentException('Invalid winning values');
                 }
-                $groups[] = [
-                    'label' => $drawLabel,
-                    'kind' => 'simple',
-                    'value' => $values,
-                ];
                 $additional = $result['specialResults'] ?? [];
                 if (! is_array($additional) || ! array_is_list($additional) || count($additional) > 100 || array_any($additional, fn ($value) => ! is_int($value) || $value < 0 || $value > 999)) {
                     throw new InvalidArgumentException('Invalid additional values');
                 }
-                if ($additional !== []) {
-                    $groups[] = ['label' => $drawLabel.' · Dodatkowe', 'kind' => 'additional', 'value' => $additional];
-                }
+                $numbers = $this->numbers($id, $values, $additional);
+                $groups[] = [
+                    'label' => $drawLabel,
+                    'kind' => 'simple',
+                    'value' => array_column($numbers, 'value'),
+                    'numbers' => $numbers,
+                ];
             }
             if ($groups === [] || count($groups) > 16) {
                 throw new InvalidArgumentException('Invalid result groups');
@@ -100,7 +99,34 @@ class Results
     }
 
     /**
-     * @return array{schema_version: int, status: string, lotto_fetched_at: int|null, server_time: int, lotto_time: string|null, sync_time: string, results: list<array{id: string, label: string, groups: list<array{label: string, kind: string, value: list<int>}>}>}
+     * @param  list<int>  $values
+     * @param  list<int>  $special
+     * @return list<array{value: int, type: string}>
+     */
+    private function numbers(string $game, array $values, array $special): array
+    {
+        if ($game === 'MultiMulti' && array_diff($special, $values) !== []) {
+            throw new InvalidArgumentException('Multi Multi Plus must be a drawn number');
+        }
+        $numbers = array_map(fn (int $value): array => [
+            'value' => $value,
+            'type' => $game === 'MultiMulti' && in_array($value, $special, true) ? 'special' : 'simple',
+        ], $values);
+        if ($game !== 'MultiMulti') {
+            foreach ($special as $value) {
+                $numbers[] = ['value' => $value, 'type' => 'special'];
+            }
+        }
+        if (count($numbers) > 100) {
+            throw new InvalidArgumentException('Invalid combined winning values');
+        }
+        usort($numbers, fn (array $a, array $b): int => ($a['value'] <=> $b['value']) ?: strcmp($a['type'], $b['type']));
+
+        return $numbers;
+    }
+
+    /**
+     * @return array{schema_version: int, status: string, lotto_fetched_at: int|null, server_time: int, lotto_time: string|null, sync_time: string, results: list<array{id: string, label: string, groups: list<array{label: string, kind: string, value: list<int>, numbers?: list<array{value: int, type: string}>}>}>}
      */
     public function read(): array
     {
