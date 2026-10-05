@@ -1,0 +1,6 @@
+services:
+  web:
+    environment:
+      SITE_ADDRESS: ':80'
+    ports: !override
+      - '127.0.0.1:18090:80'
