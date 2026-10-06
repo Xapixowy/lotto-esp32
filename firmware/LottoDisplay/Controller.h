@@ -84,20 +84,27 @@ public:
         if (status_ != Status::Ready) pageStartedAt_ = now;
         status_ = Status::Ready;
         receivedAt_ = now;
+        pollIntervalMs_ = POLL_INTERVAL_MS;
+        if (refreshing_) lastPolledAt_ = now;
         refreshing_ = false;
     }
 
-    void fail(Status status, std::uint64_t) {
+    void fail(Status status, std::uint64_t now) {
+        if (refreshing_) {
+            pollIntervalMs_ = std::min(pollIntervalMs_ * 2, MAX_POLL_INTERVAL_MS);
+            lastPolledAt_ = now;
+        }
         status_ = status;
         refreshing_ = false;
         hasTouched_ = false;
     }
 
     bool pollDue(std::uint64_t now) const {
-        return !hasPolled_ || now - lastPolledAt_ >= 15000;
+        return !refreshing_ && (!hasPolled_ || now - lastPolledAt_ >= pollIntervalMs_);
     }
 
     void connectionRestored() {
+        pollIntervalMs_ = POLL_INTERVAL_MS;
         hasPolled_ = false;
     }
 
@@ -167,6 +174,8 @@ public:
 
 private:
     static constexpr std::uint64_t PAGE_DURATION_MS = 10000;
+    static constexpr std::uint64_t POLL_INTERVAL_MS = 60000;
+    static constexpr std::uint64_t MAX_POLL_INTERVAL_MS = 300000;
 
     void movePage(bool forward) {
         if (forward) {
@@ -197,6 +206,7 @@ private:
     bool refreshing_ = false;
     bool hasPolled_ = false;
     std::uint64_t lastPolledAt_ = 0;
+    std::uint64_t pollIntervalMs_ = POLL_INTERVAL_MS;
     bool hasTouched_ = false;
     std::uint64_t touchedAt_ = 0;
     Touch touchedControl_ = Touch::Previous;
