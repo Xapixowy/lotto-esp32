@@ -103,6 +103,7 @@ Language is Polish. Rebuild and upload after changing credentials. Firmware uses
 - Arrows move between group pages, continuing into adjacent games and wrapping at the ends. The bottom-right lock holds the exact page for five minutes. Arrows still work while locked and do not extend the lock. Tap the lock again to unlock immediately.
 - The top progress line shrinks until the next page. It resets on manual navigation or unlocking and stays gray while locked. Arrow and lock taps briefly invert the button colors for 150 ms.
 - `Lotto` and `Sync` appear at bottom-left in Warsaw time. They mean the last successful upstream fetch and last successful device retrieval, respectively, rather than draw times.
+- The display polls every 60 seconds after a successful response, immediately on startup or Wi-Fi reconnection. Consecutive failed requests retry after 120, 240, then at most 300 seconds; success or Wi-Fi reconnection resets the interval. Page rotation remains independent.
 - Normal polls retain results and show `Odświeżanie...` at upper-left. Errors replace the entire screen and hide controls. Recovery preserves the selected game and any unexpired lock.
 - Wi-Fi failure, unreachable API, denied access, unavailable backend, failed Lotto refresh, invalid responses and stale data are distinct statuses. Results are stale after more than eight minutes without a successful official fetch.
 
