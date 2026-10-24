@@ -1,4 +1,4 @@
-FROM php:8.5-fpm-alpine AS base
+FROM php:8.5.12-fpm-alpine AS base
 RUN apk add --no-cache icu-libs libzip oniguruma \
     && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS icu-dev libzip-dev oniguruma-dev \
     && docker-php-ext-install intl mbstring zip bcmath pcntl \
