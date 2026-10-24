@@ -7,6 +7,11 @@ case "$release" in "$project"/releases/[a-f0-9]*) ;; *) echo 'Invalid release di
 test -f "$project/.env"
 test -f "$project/config/users.json"
 test -f "$release/release.env"
+expected_php=$(sed -n 's/^EXPECTED_PHP_VERSION=//p' "$release/release.env" | tr -d '\r')
+if [[ ! "$expected_php" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo 'Release must declare an exact EXPECTED_PHP_VERSION' >&2
+    exit 1
+fi
 
 # The lock also serializes manual invocations against GitHub deployments.
 exec 9>"$project/.deploy.lock"
@@ -38,6 +43,14 @@ rollback() {
 }
 trap rollback ERR
 compose "$release" up -d --no-build --remove-orphans backend refresh redis
+for service in backend refresh; do
+    actual_php=$(compose "$release" exec -T "$service" php -r 'echo PHP_VERSION;')
+    if [[ "$actual_php" != "$expected_php" ]]; then
+        echo "$service: expected PHP $expected_php, got $actual_php" >&2
+        false
+    fi
+    echo "$service: PHP $actual_php verified"
+done
 
 # Check Laravel through the actual host Nginx and its existing TLS configuration.
 # The public URL also checks the Cloudflare edge certificate and route.

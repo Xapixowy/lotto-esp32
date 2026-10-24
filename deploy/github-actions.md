@@ -46,7 +46,7 @@ Set branch protection for `main` to require the `checks` job before merging. Do 
 
 Each release lives under `/home/lotto-deploy/lotto-esp32/releases/<commit-sha>`. It contains Compose definitions, the activation script, an immutable image archive and its image tag. The backend and worker use that same image and the existing private files. Redis is retained through deployment, including its current snapshot; no migrations run.
 
-Deployments are serialized by GitHub concurrency and a server-side `flock`. Superseded main commits skip deployment. Activation recreates changed containers, checks public HTTPS `/up`, rejects unauthenticated results requests with 401, and verifies that the refresh worker is running. It does not call Lotto from the health check. If activation or health checks fail, it attempts to restore the last successful release and marks the workflow failed. Controlled failure tests exercise activation failure, failed health checks and successful activation; actual VPS rollback remains to be verified. Rollback failure is visible in Actions output and requires intervention. This is a brief restart, not zero downtime. Health checks verify service access, not fresh Lotto results or physical firmware behavior.
+Deployments are serialized by GitHub concurrency and a server-side `flock`. Superseded main commits skip deployment. Activation recreates changed containers, verifies the exact PHP version in both `backend` and `refresh` against `EXPECTED_PHP_VERSION` in the release metadata, checks public HTTPS `/up`, rejects unauthenticated results requests with 401, and verifies that the refresh worker is running. It does not call Lotto from the health check. If activation, PHP verification or health checks fail, it attempts to restore the last successful release and marks the workflow failed. Controlled failure tests exercise activation failure, a PHP mismatch in either service, failed health checks and successful activation; actual VPS rollback remains to be verified. Rollback failure is visible in Actions output and requires intervention. This is a brief restart, not zero downtime. Health checks verify service access, not fresh Lotto results or physical firmware behavior.
 
 `.deployed-release` records the last successful directory. Before the first automated deployment, the existing project checkout is the fallback. Keep that checkout and its existing local image until the first deployment succeeds. To roll back deliberately:
 
@@ -66,3 +66,14 @@ BACKEND_ENV_FILE=/home/lotto-deploy/lotto-esp32/.env docker compose \
   --env-file release.env -f compose.yaml -f compose.nginx.yaml \
   up -d --no-build --force-recreate backend refresh
 ```
+
+## Updating PHP
+
+The PHP runtime is pinned to `8.5.12` in `docker/Dockerfile`, shared by test and production builds. To update it:
+
+1. Change the exact patch version in the base image tag, retaining the `-fpm-alpine` variant, and open a PR.
+2. Let the PR checks rebuild with `--pull`, verify the runtime against the Dockerfile version, and run the existing test suite.
+3. After review, merge to `main`. Actions rebuilds production with `--pull`, checks its PHP version before transfer, and records the expected version in `release.env`.
+4. Check the deployment log for a verified PHP version in both `backend` and `refresh`, followed by successful health checks and activation. Confirm an authenticated results request in your API client and live results on the ESP32.
+
+The version flows from the Dockerfile through CI outputs into release metadata. Updating host PHP or running `composer update` is unnecessary for this patch upgrade. Existing release archives remain available for rollback using their own activation scripts.

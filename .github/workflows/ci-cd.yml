@@ -13,10 +13,23 @@ jobs:
   checks:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      php-version: ${{ steps.php.outputs.version }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Build test environment
-        run: docker compose -f compose.test.yaml build tests firmware-build
+        run: |
+          docker compose -f compose.test.yaml build --pull tests
+          docker compose -f compose.test.yaml build firmware-build
+      - name: Verify test PHP runtime
+        id: php
+        run: |
+          expected=$(sed -nE 's/^FROM php:([0-9]+\.[0-9]+\.[0-9]+)-fpm-alpine AS base$/\1/p' docker/Dockerfile)
+          test -n "$expected"
+          actual=$(docker compose -f compose.test.yaml run --rm --no-deps tests php -r 'echo PHP_VERSION;')
+          printf 'Test PHP: expected %s, got %s\n' "$expected" "$actual"
+          test "$actual" = "$expected"
+          echo "version=$expected" >> "$GITHUB_OUTPUT"
       - name: Backend tests, formatting and types
         run: |
           docker compose -f compose.test.yaml run --rm tests
@@ -49,6 +62,7 @@ jobs:
     env:
       VPS_HOST: ${{ vars.VPS_HOST }}
       VPS_PORT: ${{ vars.VPS_PORT || '22' }}
+      EXPECTED_PHP_VERSION: ${{ needs.checks.outputs.php-version }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Skip a superseded commit
@@ -65,11 +79,14 @@ jobs:
       - name: Build an immutable production release
         if: steps.current.outputs.deploy == 'true'
         run: |
-          docker build --target production -f docker/Dockerfile -t "lotto-display-backend:$GITHUB_SHA" .
+          docker build --pull --target production -f docker/Dockerfile -t "lotto-display-backend:$GITHUB_SHA" .
+          actual=$(docker run --rm --entrypoint php "lotto-display-backend:$GITHUB_SHA" -r 'echo PHP_VERSION;')
+          printf 'Production PHP: expected %s, got %s\n' "$EXPECTED_PHP_VERSION" "$actual"
+          test "$actual" = "$EXPECTED_PHP_VERSION"
           mkdir -p release
           docker save "lotto-display-backend:$GITHUB_SHA" | gzip > release/backend-image.tar.gz
           cp compose.yaml compose.nginx.yaml deploy/activate-release.sh release/
-          printf 'BACKEND_IMAGE=lotto-display-backend:%s\n' "$GITHUB_SHA" > release/release.env
+          printf 'BACKEND_IMAGE=lotto-display-backend:%s\nEXPECTED_PHP_VERSION=%s\n' "$GITHUB_SHA" "$EXPECTED_PHP_VERSION" > release/release.env
       - name: Configure SSH
         if: steps.current.outputs.deploy == 'true'
         env:
